@@ -1,5 +1,10 @@
 import React from 'react';
 import { Home, Globe, Sparkles } from 'lucide-react';
+import { CITIES_DATA } from '../data/citiesData';
+
+// Counts are derived from the data, never hardcoded — add a city and the badges follow.
+const LANE_1_COUNT = CITIES_DATA.filter((c) => c.lane === 1).length;
+const LANE_2_COUNT = CITIES_DATA.filter((c) => c.lane === 2).length;
 
 export const Header: React.FC = () => {
   return (
@@ -25,10 +30,10 @@ export const Header: React.FC = () => {
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <div className="badge badge-emerald" style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
-            <Home size={16} /> Lane 1: Around Ireland
+            <Home size={16} /> Lane 1: {LANE_1_COUNT} Irish Cities
           </div>
           <div className="badge badge-amber" style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
-            <Globe size={16} /> Lane 2: 20+ Global Cities
+            <Globe size={16} /> Lane 2: {LANE_2_COUNT} Global Cities
           </div>
           <div className="badge badge-purple" style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
             <Sparkles size={16} /> Direct Google Portal Search

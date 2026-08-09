@@ -1,6 +1,11 @@
 import React from 'react';
 import { LaneFilter, RegionCategory } from '../types';
+import { CITIES_DATA } from '../data/citiesData';
 import { Compass, SlidersHorizontal } from 'lucide-react';
+
+// Counts are derived from the data, never hardcoded — add a city and the labels follow.
+const LANE_1_COUNT = CITIES_DATA.filter((c) => c.lane === 1).length;
+const LANE_2_COUNT = CITIES_DATA.filter((c) => c.lane === 2).length;
 
 interface LaneTabsProps {
   activeLane: LaneFilter;
@@ -40,7 +45,7 @@ export const LaneTabs: React.FC<LaneTabsProps> = ({
             className={`btn ${activeLane === 'lane1' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ fontSize: '0.85rem', padding: '8px 16px' }}
           >
-            ☘️ Lane 1: Around Ireland (4)
+            ☘️ Lane 1: Around Ireland ({LANE_1_COUNT})
           </button>
 
           <button
@@ -48,7 +53,7 @@ export const LaneTabs: React.FC<LaneTabsProps> = ({
             className={`btn ${activeLane === 'lane2' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ fontSize: '0.85rem', padding: '8px 16px' }}
           >
-            ✈️ Lane 2: International (18)
+            ✈️ Lane 2: International ({LANE_2_COUNT})
           </button>
         </div>
 

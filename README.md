@@ -1,28 +1,29 @@
 # ☘️ Irish Property Reality Check & Global Buyer's Remorse Comparator
 
 > **Ever wondered what your €550k Dublin 2-bed terraced house with a damp wall buys in Bordeaux, Dubai, Sydney, or Galway?**  
-> *Compare house prices, square footage, weather stats, and existential dread metrics across Ireland and 20+ choice global destinations.*
+> *Compare house prices, square footage, weather stats, and existential dread metrics across Ireland and 21 choice global destinations.*
 
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-18-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)
 ![Vite](https://img.shields.io/badge/Vite-6.0-purple.svg)
-![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)
+[![CI](https://github.com/Redser06/irish-property-reality-check/actions/workflows/ci.yml/badge.svg)](https://github.com/Redser06/irish-property-reality-check/actions/workflows/ci.yml)
 
 ---
 
 ## 🌟 Highlights & Features
 
 - 🇮🇪 **Dual Comparison Lanes**:
-  - **Lane 1 (Around Ireland)**: Compare Dublin budgets against Galway, Limerick, Cork, and Belfast (NI).
-  - **Lane 2 (International)**: Compare against 18 premier cities across the UK, Europe, Australia, the Middle East, and North America.
+  - **Lane 1 (Around Ireland)**: Compare Dublin budgets against Galway, Limerick, Cork, and Belfast (NI) — 4 cities.
+  - **Lane 2 (International)**: Compare against 21 cities across the UK, Europe, Australia, the Middle East, and North America.
+  - **25 cities total.**
 - 📐 **Live Specs & Space Multipliers**: Automatically calculates estimated square meters, square feet, bedroom/bathroom counts, and floor space multipliers (e.g. *2.4x larger living space*).
 - ☀️ **Climate & Weather Differentials**: Compares annual sunny days vs Dublin’s average 140 rainy days.
-- 🍺 **Guinness Value Equivalence**: Measures space savings in monthly pints of Guinness!
+- 🍺 **Guinness Value Equivalence**: Converts the difference in living space (extra square footage vs your Irish property) into an equivalent number of pints of Guinness, priced at roughly €6.50 a pint. It's a one-off "this much extra space is worth this many pints" figure — not a recurring monthly spend.
 - 🔥 **Existential Dread Meter**: Satirical *Buyer's Remorse Index* score (0–100) with witty real-estate roasts.
 - 🔍 **One-Click Real-World Search**:
-  - **Google Listings Button**: Generates pre-formatted search queries targeting active listings in each destination matching your budget.
-  - **Direct Portal Links**: Opens `Rightmove`, `Idealista`, `Domain.com.au`, `PropertyFinder`, `Zillow`, `SeLoger`, `PropertyPal`, and `Daft.ie`.
+  - **Google Listings Button**: Generates a pre-formatted Google search query for each destination (property type, city, converted price) — a starting point for browsing, not a live filtered search.
+  - **Direct Portal Links**: Static links to each destination's city/region landing page on `Rightmove`, `Idealista`, `Domain.com.au`, `PropertyFinder`, `Zillow`, `SeLoger`, `PropertyPal`, and `Daft.ie`. These are general city pages, not searches filtered to your budget — you'll still need to set the price range yourself once you land on the portal.
 - 📊 **In-Depth Side-by-Side Modal**: Full tabular comparison of metrics, architecture styles, BER ratings, and perks.
 - 🎉 **Interactive Confetti**: "Accept My Fate" confetti animation for when the reality check hits.
 
@@ -87,6 +88,26 @@ npm run preview
 
 ---
 
+## ✅ Quality Checks
+
+```bash
+# Lint (ESLint 9, flat config)
+npm run lint
+
+# Typecheck only, no build output
+npx tsc --noEmit
+
+# Run the test suite once (used by CI)
+npm run test:run
+
+# Run tests in watch mode
+npm test
+```
+
+CI (`.github/workflows/ci.yml`) runs lint, typecheck, test, and build on every push and pull request against `main`.
+
+---
+
 ## 🗂️ Project Structure
 
 ```text
@@ -94,7 +115,12 @@ irish-property-reality-check/
 ├── index.html                  # HTML entry point with Google Fonts
 ├── package.json                # Dependencies and build scripts
 ├── vite.config.ts              # Vite configuration
+├── vitest.config.ts            # Vitest configuration
 ├── tsconfig.json               # TypeScript configuration
+├── eslint.config.js            # ESLint 9 flat config
+├── .github/workflows/ci.yml    # Lint, typecheck, test, build on push/PR
+├── LICENSE                     # MIT license
+├── .env.example                # Optional future-roadmap env vars
 └── src/
     ├── main.tsx                # React app mounting point
     ├── App.tsx                 # Root component & state manager
@@ -102,9 +128,10 @@ irish-property-reality-check/
     ├── types/
     │   └── index.ts            # TypeScript interfaces
     ├── data/
-    │   └── citiesData.ts       # 22 Cities dataset & Irish presets
+    │   └── citiesData.ts       # 25 Cities dataset & Irish presets
     ├── utils/
-    │   └── comparatorEngine.ts # Calculation logic & Remorse Index
+    │   ├── comparatorEngine.ts      # Calculation logic & Remorse Index
+    │   └── comparatorEngine.test.ts # Unit tests (Vitest)
     └── components/
         ├── Header.tsx              # App banner & taglines
         ├── PropertyInputForm.tsx   # URL/spec input & presets
