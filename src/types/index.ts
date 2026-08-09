@@ -14,6 +14,20 @@ export interface IrishPropertyInput {
   features: string[];
 }
 
+/**
+ * Result of parsing a raw user input string (free text or a listing URL).
+ *
+ * `extracted` reports, per field, whether the value in `input` was ACTUALLY read
+ * from the raw input. A `false` flag means the value was inherited from the
+ * fallback, so the UI must not present it as something it understood.
+ */
+export interface ParseResult {
+  input: IrishPropertyInput;
+  extracted: { price: boolean; beds: boolean; area: boolean };
+  isUrl: boolean;
+  warning?: string;
+}
+
 export interface CityData {
   id: string;
   name: string;
@@ -34,6 +48,10 @@ export interface CityData {
   sarcasticQuote: string;
   searchKeywords: string;
   portalSearchUrl: string;
+  // Provenance metadata (optional: populated by the data layer, not required by the engine)
+  pricePerSqMSource?: string;
+  pricePerSqMAsOf?: string;
+  fxAsOf?: string;
 }
 
 export interface ComparisonResult {
