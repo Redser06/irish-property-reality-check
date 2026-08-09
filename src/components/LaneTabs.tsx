@@ -6,6 +6,7 @@ import { Compass, SlidersHorizontal } from 'lucide-react';
 // Counts are derived from the data, never hardcoded — add a city and the labels follow.
 const LANE_1_COUNT = CITIES_DATA.filter((c) => c.lane === 1).length;
 const LANE_2_COUNT = CITIES_DATA.filter((c) => c.lane === 2).length;
+const TOTAL_COUNT = CITIES_DATA.length;
 
 interface LaneTabsProps {
   activeLane: LaneFilter;
@@ -37,7 +38,7 @@ export const LaneTabs: React.FC<LaneTabsProps> = ({
             className={`btn ${activeLane === 'all' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ fontSize: '0.85rem', padding: '8px 16px' }}
           >
-            <Compass size={16} /> All Destinations ({resultsCount})
+            <Compass size={16} /> All Destinations ({TOTAL_COUNT})
           </button>
 
           <button
@@ -59,6 +60,12 @@ export const LaneTabs: React.FC<LaneTabsProps> = ({
 
         {/* Sorting Dropdown */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* The lane buttons above name how many cities exist; this names how many
+              survived the current filters. Keeping them separate stops "All
+              Destinations" from reporting a filtered number. */}
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+            Showing {resultsCount} of {TOTAL_COUNT}
+          </span>
           <SlidersHorizontal size={16} color="var(--text-muted)" />
           <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Sort By:</span>
           <select
