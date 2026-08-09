@@ -25,6 +25,8 @@ export interface CityData {
   currencySymbol: string;
   exchangeRateFromEur: number; // 1 EUR in target currency
   pricePerSqM: number; // Average price in EUR per m2
+  pricePerSqMSource?: string; // Named, checkable citation for pricePerSqM
+  pricePerSqMAsOf?: string; // YYYY-MM-DD date the pricePerSqM figure was sourced
   typicalBuilding: string;
   sunnyDaysPerYear: number;
   averageSummerTempC: number;
