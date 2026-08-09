@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { ComparisonResult, IrishPropertyInput } from '../types';
+import { DUBLIN_BASELINE } from '../data/baseline';
 import { X, Search, ExternalLink, Check, Copy, Flame, AlertTriangle } from 'lucide-react';
 
 interface CityDetailModalProps {
@@ -296,7 +297,7 @@ export const CityDetailModal: React.FC<CityDetailModalProps> = ({
               </tr>
               <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                 <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontWeight: 600 }}>Annual Sunshine</td>
-                <td style={{ padding: '12px 16px' }}>140 Days (Dublin average)</td>
+                <td style={{ padding: '12px 16px' }}>{DUBLIN_BASELINE.sunnyDaysPerYear} Days (Dublin average)</td>
                 <td style={{ padding: '12px 16px', fontWeight: 700, color: '#fbbf24' }}>
                   {city.sunnyDaysPerYear} Days ({sunnyDaysDiff > 0 ? `+${sunnyDaysDiff}` : sunnyDaysDiff})
                 </td>

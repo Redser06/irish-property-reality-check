@@ -39,6 +39,16 @@ export interface CityData {
   currencySymbol: string;
   exchangeRateFromEur: number; // 1 EUR in target currency
   pricePerSqM: number; // Average price in EUR per m2
+  pricePerSqMSource?: string; // Named, checkable citation for pricePerSqM
+  pricePerSqMAsOf?: string; // YYYY-MM-DD date the pricePerSqM figure was sourced
+  /**
+   * WHAT pricePerSqM measures. Apartment €/m² runs well above house €/m² in the
+   * same city, because a house spreads its price over more floor area — so mixing
+   * bases across cities silently corrupts the comparison. Record it per city and
+   * keep it consistent with `typicalBuilding`: a city whose archetype is a
+   * detached house should not be priced on apartment data.
+   */
+  pricePerSqMBasis?: 'house' | 'apartment' | 'all-dwellings' | 'blended';
   typicalBuilding: string;
   sunnyDaysPerYear: number;
   averageSummerTempC: number;
@@ -48,10 +58,7 @@ export interface CityData {
   sarcasticQuote: string;
   searchKeywords: string;
   portalSearchUrl: string;
-  // Provenance metadata (optional: populated by the data layer, not required by the engine)
-  pricePerSqMSource?: string;
-  pricePerSqMAsOf?: string;
-  fxAsOf?: string;
+  fxAsOf?: string; // YYYY-MM-DD the exchangeRateFromEur figure was accurate
 }
 
 export interface ComparisonResult {
