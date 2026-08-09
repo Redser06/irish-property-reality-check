@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ComparisonResult, IrishPropertyInput } from '../types';
 import { AlertTriangle, Trophy, Sun, Beer, Compass } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -14,6 +14,14 @@ export const RemorseDashboard: React.FC<RemorseDashboardProps> = ({
   irishInput,
   onSelectCity
 }) => {
+  // Declared before the early return so hook order stays stable.
+  const [activeRowId, setActiveRowId] = useState<string | null>(null);
+
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   if (comparisons.length === 0) return null;
 
   // Calculate overall dread level (average of top 5 highest remorse cities)
@@ -31,9 +39,12 @@ export const RemorseDashboard: React.FC<RemorseDashboardProps> = ({
   const maxSun = [...comparisons].sort((a, b) => b.sunnyDaysDiff - a.sunnyDaysDiff)[0];
 
   const handleConfetti = () => {
+    // The user explicitly asked for confetti, but keep it brief and sparse
+    // for anyone who has asked the OS to reduce motion.
     confetti({
-      particleCount: 100,
-      spread: 70,
+      particleCount: prefersReducedMotion ? 25 : 100,
+      spread: prefersReducedMotion ? 35 : 70,
+      ticks: prefersReducedMotion ? 60 : 200,
       origin: { y: 0.6 },
       colors: ['#10b981', '#f59e0b', '#f43f5e', '#3b82f6']
     });
@@ -89,32 +100,47 @@ export const RemorseDashboard: React.FC<RemorseDashboardProps> = ({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {top3.map((comp, idx) => (
-              <div
-                key={comp.city.id}
-                onClick={() => onSelectCity(comp)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 12px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: 'var(--radius-sm)',
-                  cursor: 'pointer',
-                  border: '1px solid var(--border-color)',
-                  transition: 'background 0.2s ease'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 600 }}>
-                  <span style={{ color: 'var(--accent-amber)', fontWeight: 800 }}>#{idx + 1}</span>
-                  <span>{comp.city.flagEmoji} {comp.city.name}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.8rem' }}>
-                  <span style={{ color: '#34d399', fontWeight: 700 }}>{comp.spaceMultiplier}x Space</span>
-                  <span className="badge badge-rose" style={{ padding: '2px 8px', fontSize: '0.75rem' }}>{comp.remorseIndex}/100</span>
-                </div>
-              </div>
-            ))}
+            {top3.map((comp, idx) => {
+              const isActive = activeRowId === comp.city.id;
+              return (
+                <button
+                  key={comp.city.id}
+                  type="button"
+                  onClick={() => onSelectCity(comp)}
+                  onFocus={() => setActiveRowId(comp.city.id)}
+                  onBlur={() => setActiveRowId((current) => (current === comp.city.id ? null : current))}
+                  onMouseEnter={() => setActiveRowId(comp.city.id)}
+                  onMouseLeave={() => setActiveRowId((current) => (current === comp.city.id ? null : current))}
+                  aria-label={`Open detailed breakdown for ${comp.city.name}, remorse rating ${comp.remorseIndex} out of 100`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    textAlign: 'left',
+                    font: 'inherit',
+                    color: 'inherit',
+                    padding: '8px 12px',
+                    background: isActive ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    border: '1px solid var(--border-color)',
+                    outline: isActive ? '2px solid var(--accent-amber)' : 'none',
+                    outlineOffset: '2px',
+                    transition: prefersReducedMotion ? 'none' : 'background 0.2s ease'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 600 }}>
+                    <span style={{ color: 'var(--accent-amber)', fontWeight: 800 }}>#{idx + 1}</span>
+                    <span><span aria-hidden="true">{comp.city.flagEmoji} </span>{comp.city.name}</span>
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.8rem' }}>
+                    <span style={{ color: '#34d399', fontWeight: 700 }}>{comp.spaceMultiplier}x Space</span>
+                    <span className="badge badge-rose" style={{ padding: '2px 8px', fontSize: '0.75rem' }}>{comp.remorseIndex}/100</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -131,7 +157,7 @@ export const RemorseDashboard: React.FC<RemorseDashboardProps> = ({
               <Compass size={14} /> Maximum Space Out There
             </div>
             <div>
-              In <strong style={{ color: '#fff' }}>{maxSpace?.city.name}</strong>, your budget buys <strong style={{ color: 'var(--accent-amber)' }}>{maxSpace?.spaceMultiplier}x</strong> floor space ({maxSpace?.estimatedSqFt.toLocaleString()} sq ft)!
+              In <strong style={{ color: '#fff' }}>{maxSpace?.city.name}</strong>, your budget buys <strong style={{ color: 'var(--accent-amber)' }}>{maxSpace?.spaceMultiplier}x</strong> floor space ({maxSpace?.estimatedSqM.toLocaleString()} m² / {maxSpace?.estimatedSqFt.toLocaleString()} sq ft)!
             </div>
           </div>
 
