@@ -1,52 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { CityData, IrishPropertyInput } from '../types';
-// TODO(integration): Agent A is rewriting comparatorEngine.ts in parallel to
-// the new contract documented in the remediation brief:
-//
-//   export interface ParseResult {
-//     input: IrishPropertyInput;
-//     extracted: { price: boolean; beds: boolean; area: boolean };
-//     isUrl: boolean;
-//     warning?: string;
-//   }
-//   export function parseIrishPropertyInput(rawInput: string, fallbackInput: IrishPropertyInput): ParseResult
-//   export function calculateComparison(input: IrishPropertyInput, city: CityData): ComparisonResult
-//   export const PINT_PRICE_EUR = 6.5
-//
-// The engine in this worktree still has the OLD signature
-// (parseIrishPropertyInput returns IrishPropertyInput directly, and there is
-// no ParseResult type / PINT_PRICE_EUR export). These tests are written
-// against the NEW contract on purpose — they are expected to fail (and may
-// fail to typecheck) until Agent A's rewrite lands. The `as unknown as`
-// casts and `@ts-expect-error` below exist solely to keep this file
-// compiling against the old shape so `npm run build` / `tsc --noEmit` stay
-// green; remove them once the real ParseResult-returning engine is merged.
 import {
   calculateComparison,
-  parseIrishPropertyInput,
+  parseIrishPropertyInput as parse,
   PINT_PRICE_EUR,
 } from './comparatorEngine';
-
-// --- New-contract type, duplicated here because the old engine doesn't export it yet. ---
-interface ParseResult {
-  input: IrishPropertyInput;
-  extracted: { price: boolean; beds: boolean; area: boolean };
-  isUrl: boolean;
-  warning?: string;
-}
-
-/**
- * Thin wrapper that calls the real parseIrishPropertyInput but types its
- * result as the NEW contract (ParseResult), rather than the old engine's
- * `IrishPropertyInput` return type. This is the single integration seam:
- * once Agent A ships the real ParseResult-returning function, this cast
- * becomes a no-op and can be deleted.
- */
-function parse(rawInput: string, fallbackInput: IrishPropertyInput): ParseResult {
-  // TODO(integration): drop this cast once parseIrishPropertyInput returns
-  // ParseResult natively.
-  return parseIrishPropertyInput(rawInput, fallbackInput) as unknown as ParseResult;
-}
 
 const fallback: IrishPropertyInput = {
   title: '2 Bed Semi-Detached House in Crumlin / Terenure Border',

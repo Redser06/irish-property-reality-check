@@ -4,53 +4,6 @@ import { IrishPropertyInput, PresetProperty } from '../types';
 import { PRESET_PROPERTIES } from '../data/citiesData';
 import { parseIrishPropertyInput } from '../utils/comparatorEngine';
 
-/* ------------------------------------------------------------------------ */
-/* TODO(integration): remove once Agent A's ParseResult lands in src/types.   */
-/* Everything between these markers is a temporary shim so this component can */
-/* compile and run against BOTH the old parser signature (returns            */
-/* IrishPropertyInput) and the new one (returns ParseResult). At integration: */
-/*   1. delete this block,                                                    */
-/*   2. `import { ParseResult } from '../types';`,                            */
-/*   3. replace `runParse(...)` with `parseIrishPropertyInput(...)`.          */
-/* ------------------------------------------------------------------------ */
-interface ParseResult {
-  input: IrishPropertyInput;
-  extracted: { price: boolean; beds: boolean; area: boolean };
-  isUrl: boolean;
-  warning?: string;
-}
-
-type NewParseFn = (rawInput: string, fallbackInput: IrishPropertyInput) => ParseResult;
-
-/**
- * Calls the parser and normalises whatever it returns into a ParseResult.
- * Once Agent A's version lands, the `legacy` branch is dead code.
- */
-function runParse(rawInput: string, fallbackInput: IrishPropertyInput): ParseResult {
-  const raw = (parseIrishPropertyInput as unknown as NewParseFn)(rawInput, fallbackInput);
-
-  // New signature: has an `extracted` flag bag. Use it as-is.
-  if (raw && typeof raw === 'object' && 'extracted' in raw && raw.extracted) {
-    return raw;
-  }
-
-  // Legacy signature: it returned an IrishPropertyInput. Infer honesty flags by
-  // diffing against the fallback — conservative (it under-reports a parse that
-  // happens to match the previous value), which is the safe direction to err.
-  const legacy = raw as unknown as IrishPropertyInput;
-  const trimmed = rawInput.trim();
-  return {
-    input: legacy,
-    extracted: {
-      price: legacy.priceEur !== fallbackInput.priceEur,
-      beds: legacy.beds !== fallbackInput.beds,
-      area: legacy.sqft !== fallbackInput.sqft
-    },
-    isUrl: /^https?:\/\//i.test(trimmed)
-  };
-}
-/* --------------------------- end integration shim -------------------------- */
-
 interface ParseNotice {
   tone: 'good' | 'warn' | 'bad';
   read: string[];
@@ -87,7 +40,7 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
       return;
     }
 
-    const result = runParse(urlOrText, currentInput);
+    const result = parseIrishPropertyInput(urlOrText, currentInput);
     const { input, extracted, isUrl, warning } = result;
 
     const read: string[] = [];
