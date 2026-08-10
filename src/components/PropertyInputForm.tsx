@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Link as LinkIcon, Euro, Bed, Maximize2, MapPin, Sparkles, RefreshCw, AlertTriangle, CheckCircle2, X } from 'lucide-react';
-import { IrishPropertyInput, PresetProperty } from '../types';
+import { FieldConfidence, InputConfidence, IrishPropertyInput, PresetProperty } from '../types';
 import { PRESET_PROPERTIES } from '../data/citiesData';
 import { parseIrishPropertyInput } from '../utils/comparatorEngine';
 
@@ -14,7 +14,13 @@ interface ParseNotice {
 
 interface PropertyInputFormProps {
   currentInput: IrishPropertyInput;
-  onInputChange: (newInput: IrishPropertyInput) => void;
+  /**
+   * `confidence` travels with the input so downstream cards can tell a value the
+   * app READ from a value it GUESSED. Passing the input alone is how the original
+   * silent-stale-numbers bug worked.
+   */
+  onInputChange: (newInput: IrishPropertyInput, confidence: InputConfidence) => void;
+  currentConfidence: InputConfidence;
 }
 
 const NOTICE_TONES = {
@@ -23,8 +29,23 @@ const NOTICE_TONES = {
   bad: { bg: 'rgba(244, 63, 94, 0.08)', border: 'rgba(244, 63, 94, 0.32)', accent: 'var(--accent-rose)' }
 } as const;
 
+/** A parsed field is only 'read' if the parser actually found it in the input. */
+function confidenceFromParse(
+  extracted: { price: boolean; beds: boolean; area: boolean },
+  isUrl: boolean,
+): InputConfidence {
+  const flag = (found: boolean): FieldConfidence => (found ? 'read' : 'assumed');
+  return {
+    price: flag(extracted.price),
+    beds: flag(extracted.beds),
+    area: flag(extracted.area),
+    source: isUrl ? 'url-slug' : 'free-text',
+  };
+}
+
 export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
   currentInput,
+  currentConfidence,
   onInputChange
 }) => {
   const [urlOrText, setUrlOrText] = useState<string>('');
@@ -67,14 +88,25 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
       setHighlightArea(false);
     }
 
-    onInputChange(input);
+    onInputChange(input, confidenceFromParse(extracted, isUrl));
   };
 
   const handlePresetSelect = (preset: PresetProperty) => {
     setUrlOrText('');
     setNotice(null);
     setHighlightArea(false);
-    onInputChange(preset.input);
+    onInputChange(preset.input, { price: 'preset', beds: 'preset', area: 'preset', source: 'preset' });
+  };
+
+  /**
+   * A manual edit upgrades only the field that was edited. Correcting the floor
+   * area must not imply the price was verified too.
+   */
+  const handleManualEdit = (patch: Partial<IrishPropertyInput>, field?: keyof Omit<InputConfidence, 'source'>) => {
+    const nextConfidence: InputConfidence = field
+      ? { ...currentConfidence, [field]: 'entered', source: 'manual' }
+      : { ...currentConfidence, source: 'manual' };
+    onInputChange({ ...currentInput, ...patch }, nextConfidence);
   };
 
   return (
@@ -243,7 +275,7 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
             <input
               type="number"
               value={currentInput.priceEur}
-              onChange={(e) => onInputChange({ ...currentInput, priceEur: Math.max(50000, parseInt(e.target.value) || 0) })}
+              onChange={(e) => handleManualEdit({ priceEur: Math.max(50000, parseInt(e.target.value) || 0) }, 'price')}
               className="input-field"
             />
           </div>
@@ -252,7 +284,7 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
             <input
               type="number"
               value={currentInput.beds}
-              onChange={(e) => onInputChange({ ...currentInput, beds: Math.max(1, parseInt(e.target.value) || 1) })}
+              onChange={(e) => handleManualEdit({ beds: Math.max(1, parseInt(e.target.value) || 1) }, 'beds')}
               className="input-field"
             />
           </div>
@@ -278,7 +310,7 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
               value={currentInput.sqft}
               onChange={(e) => {
                 setHighlightArea(false);
-                onInputChange({ ...currentInput, sqft: Math.max(200, parseInt(e.target.value) || 500) });
+                handleManualEdit({ sqft: Math.max(200, parseInt(e.target.value) || 500) }, 'area');
               }}
               className="input-field"
               autoFocus={highlightArea}
@@ -298,7 +330,7 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
             <input
               type="text"
               value={currentInput.location}
-              onChange={(e) => onInputChange({ ...currentInput, location: e.target.value })}
+              onChange={(e) => handleManualEdit({ location: e.target.value })}
               className="input-field"
             />
           </div>

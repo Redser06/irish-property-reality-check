@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { ComparisonResult, IrishPropertyInput } from '../types';
 import { DUBLIN_BASELINE } from '../data/baseline';
 import { SQFT_PER_SQM } from '../utils/units';
-import { X, Search, ExternalLink, Check, Copy, Flame, AlertTriangle } from 'lucide-react';
+import { FX_AS_OF } from '../data/generated/fx';
+import { X, Search, ExternalLink, Check, Copy, Flame, AlertTriangle, Info } from 'lucide-react';
 
 interface CityDetailModalProps {
   comparison: ComparisonResult;
@@ -44,7 +45,7 @@ export const CityDetailModal: React.FC<CityDetailModalProps> = ({
 
   const titleId = useId();
 
-  const { city, convertedPrice, estimatedSqM, estimatedSqFt, estimatedBeds, estimatedBaths, spaceMultiplier, remorseIndex, remorseLabel, sunnyDaysDiff, googleSearchUrl, portalSearchUrl } = comparison;
+  const { city, convertedPrice, estimatedSqM, estimatedSqFt, estimatedBeds, estimatedBaths, spaceMultiplier, remorseIndex, remorseLabel, sunnyDaysDiff, googleSearchUrl, portalSearchUrl, provenance } = comparison;
 
   const searchQueryText = `${estimatedBeds} bedroom house for sale ${city.name} ${city.currencySymbol}${convertedPrice.toLocaleString()}`;
 
@@ -345,6 +346,59 @@ export const CityDetailModal: React.FC<CityDetailModalProps> = ({
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
             "{city.sarcasticQuote}"
           </p>
+        </div>
+
+        {/* Where these numbers came from. Every figure on this page divides by the
+            band below, so it gets stated plainly rather than buried in a tooltip. */}
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.04)',
+          padding: '18px',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--border-color)',
+          marginBottom: '24px'
+        }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Info size={16} color="var(--accent-emerald)" aria-hidden="true" /> Where these numbers come from
+            <span
+              className={`badge ${provenance.overall === 'high' ? 'badge-emerald' : provenance.overall === 'medium' ? 'badge-amber' : 'badge-rose'}`}
+              style={{ fontSize: '0.7rem', marginLeft: 'auto' }}
+            >
+              {provenance.overall} confidence
+            </span>
+          </h4>
+
+          <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 14px', fontSize: '0.82rem', margin: 0 }}>
+            <dt style={{ color: 'var(--text-muted)' }}>Price basis</dt>
+            <dd style={{ margin: 0 }}>
+              €{provenance.band.band.pricePerSqM.toLocaleString()}/m² — {provenance.band.band.basis.replace('-', ' ')},{' '}
+              {provenance.band.band.confidence}
+              {provenance.band.band.sampleSize ? ` (n=${provenance.band.band.sampleSize.toLocaleString()})` : ''}
+            </dd>
+
+            <dt style={{ color: 'var(--text-muted)' }}>Source</dt>
+            <dd style={{ margin: 0, color: 'var(--text-secondary)' }}>
+              {provenance.band.band.source}
+              {provenance.band.band.asOf !== 'unknown' ? ` (${provenance.band.band.asOf})` : ''}
+            </dd>
+
+            <dt style={{ color: 'var(--text-muted)' }}>Your figures</dt>
+            <dd style={{ margin: 0, color: 'var(--text-secondary)' }}>
+              price {provenance.input.price} · beds {provenance.input.beds} · floor area {provenance.input.area}
+            </dd>
+
+            <dt style={{ color: 'var(--text-muted)' }}>Exchange rate</dt>
+            <dd style={{ margin: 0, color: 'var(--text-secondary)' }}>
+              ECB reference rates, {FX_AS_OF}
+            </dd>
+          </dl>
+
+          {provenance.caveats.length > 0 && (
+            <ul style={{ margin: '12px 0 0', paddingLeft: '18px', fontSize: '0.8rem', color: 'var(--accent-amber)' }}>
+              {provenance.caveats.map((c) => (
+                <li key={c} style={{ marginBottom: '2px' }}>{c}</li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Live Search Query Generator */}
