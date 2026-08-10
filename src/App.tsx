@@ -9,6 +9,11 @@ import { IrishPropertyInput, LaneFilter, RegionCategory, ComparisonResult } from
 import { CITIES_DATA, PRESET_PROPERTIES } from './data/citiesData';
 import { calculateComparison } from './utils/comparatorEngine';
 
+// Counts are derived from the data, never hardcoded — add a city and the copy follows.
+const TOTAL_CITY_COUNT = CITIES_DATA.length;
+const LANE_1_COUNT = CITIES_DATA.filter((c) => c.lane === 1).length;
+const LANE_2_COUNT = CITIES_DATA.filter((c) => c.lane === 2).length;
+
 export const App: React.FC = () => {
   // Default property input (€550k Dublin 2-Bed)
   const [irishInput, setIrishInput] = useState<IrishPropertyInput>(PRESET_PROPERTIES[0].input);
@@ -121,7 +126,8 @@ export const App: React.FC = () => {
         fontSize: '0.85rem'
       }}>
         <p style={{ marginBottom: '6px' }}>
-          ☘️ <strong>Irish Property Reality Check App</strong> — Comparing Dublin & Irish housing budgets across 22 global cities.
+          ☘️ <strong>Irish Property Reality Check App</strong> — Comparing Dublin &amp; Irish housing budgets across{' '}
+          {TOTAL_CITY_COUNT} cities: {LANE_1_COUNT} you could reach on a wet Tuesday, {LANE_2_COUNT} that need a passport.
         </p>
         <p style={{ fontSize: '0.75rem' }}>
           Estimates are based on average city price/m² benchmarks, real-time portal query structures, and satirical existential calculations.

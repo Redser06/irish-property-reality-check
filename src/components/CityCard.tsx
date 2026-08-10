@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ComparisonResult } from '../types';
 import { Search, ExternalLink, Sun, Maximize2, Bed, Bath, Flame, Beer, ArrowRight } from 'lucide-react';
 
@@ -7,22 +7,72 @@ interface CityCardProps {
   onSelectCity: (comparison: ComparisonResult) => void;
 }
 
+/**
+ * guinnessEquivPints is the monetary value of the space difference expressed in
+ * pints, so it can be negative (budget buys less space than at home) and runs to
+ * tens of thousands. Abbreviate above 10k so the badge never overflows the card,
+ * and always take the sign from the value rather than hardcoding a "+".
+ */
+const formatPints = (pints: number): string => {
+  const rounded = Math.round(pints);
+  const abs = Math.abs(rounded);
+
+  if (abs >= 1_000_000) {
+    return `${Number((abs / 1_000_000).toFixed(1)).toLocaleString()}m`;
+  }
+  if (abs >= 10_000) {
+    return `${Number((abs / 1_000).toFixed(1)).toLocaleString()}k`;
+  }
+  return abs.toLocaleString();
+};
+
 export const CityCard: React.FC<CityCardProps> = ({ comparison, onSelectCity }) => {
-  const { city, convertedPrice, estimatedSqFt, estimatedBeds, estimatedBaths, spaceMultiplier, remorseIndex, sunnyDaysDiff } = comparison;
+  const { city, convertedPrice, estimatedSqM, estimatedSqFt, estimatedBeds, estimatedBaths, spaceMultiplier, remorseIndex, sunnyDaysDiff } = comparison;
+
+  const [imageFailed, setImageFailed] = useState(false);
 
   const isHighRemorse = remorseIndex >= 70;
+  const pints = comparison.guinnessEquivPints;
 
   return (
     <div className={`glass-card ${isHighRemorse ? 'high-remorse-border' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       
       {/* City Header Image */}
-      <div style={{ position: 'relative', height: '180px', width: '100%', overflow: 'hidden' }}>
-        <img
-          src={city.imageUrl}
-          alt={city.name}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
-          loading="lazy"
-        />
+      {/* Fixed-height, non-shrinking box reserves the image space before it loads */}
+      <div style={{ position: 'relative', height: '180px', minHeight: '180px', width: '100%', flexShrink: 0, overflow: 'hidden' }}>
+        {imageFailed ? (
+          <div
+            role="img"
+            aria-label={`${city.name} photo unavailable`}
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              // Clear the gradient + city title that sit over the bottom of this box.
+              paddingBottom: '52px',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(15, 23, 42, 0.95) 70%)'
+            }}
+          >
+            <span style={{ fontSize: '2.5rem', lineHeight: 1 }} aria-hidden="true">{city.flagEmoji}</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              Postcard lost in the post
+            </span>
+          </div>
+        ) : (
+          <img
+            src={city.imageUrl}
+            alt={city.name}
+            width={640}
+            height={360}
+            onError={() => setImageFailed(true)}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+            loading="lazy"
+          />
+        )}
         <div style={{
           position: 'absolute',
           inset: 0,
@@ -102,6 +152,9 @@ export const CityCard: React.FC<CityCardProps> = ({ comparison, onSelectCity }) 
             <div>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Floor Space</span>
               <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>
+                {estimatedSqM.toLocaleString()} m²
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                 {estimatedSqFt.toLocaleString()} sq ft
               </div>
             </div>
@@ -113,8 +166,19 @@ export const CityCard: React.FC<CityCardProps> = ({ comparison, onSelectCity }) 
               <Sun size={13} /> {city.sunnyDaysPerYear} Sunny Days ({sunnyDaysDiff > 0 ? `+${sunnyDaysDiff}` : sunnyDaysDiff} vs Dublin)
             </div>
             {spaceMultiplier > 1.2 && (
-              <div className="badge" style={{ background: 'rgba(168, 85, 247, 0.12)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.25)', fontSize: '0.75rem' }}>
-                <Beer size={13} /> +{comparison.guinnessEquivPints.toLocaleString()} Pints of Space Value
+              <div
+                className="badge"
+                title={`${pints > 0 ? '+' : ''}${Math.round(pints).toLocaleString()} pints of space value`}
+                style={
+                  pints < 0
+                    ? { background: 'rgba(244, 63, 94, 0.12)', color: '#fb7185', border: '1px solid rgba(244, 63, 94, 0.25)', fontSize: '0.75rem', maxWidth: '100%' }
+                    : { background: 'rgba(168, 85, 247, 0.12)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.25)', fontSize: '0.75rem', maxWidth: '100%' }
+                }
+              >
+                <Beer size={13} aria-hidden="true" />
+                {pints > 0 && <>+{formatPints(pints)} Pints of Space Value</>}
+                {pints < 0 && <>-{formatPints(pints)} Pints of Space Value</>}
+                {pints === 0 && <>Level pegging on space value</>}
               </div>
             )}
           </div>

@@ -1,13 +1,27 @@
 import React, { useState } from 'react';
-import { Search, Link as LinkIcon, Euro, Bed, Maximize2, MapPin, Sparkles, RefreshCw } from 'lucide-react';
+import { Search, Link as LinkIcon, Euro, Bed, Maximize2, MapPin, Sparkles, RefreshCw, AlertTriangle, CheckCircle2, X } from 'lucide-react';
 import { IrishPropertyInput, PresetProperty } from '../types';
 import { PRESET_PROPERTIES } from '../data/citiesData';
 import { parseIrishPropertyInput } from '../utils/comparatorEngine';
+
+interface ParseNotice {
+  tone: 'good' | 'warn' | 'bad';
+  read: string[];
+  missing: string[];
+  warning?: string;
+  areaUnknown: boolean;
+}
 
 interface PropertyInputFormProps {
   currentInput: IrishPropertyInput;
   onInputChange: (newInput: IrishPropertyInput) => void;
 }
+
+const NOTICE_TONES = {
+  good: { bg: 'rgba(16, 185, 129, 0.08)', border: 'rgba(16, 185, 129, 0.3)', accent: 'var(--accent-emerald)' },
+  warn: { bg: 'rgba(245, 158, 11, 0.08)', border: 'rgba(245, 158, 11, 0.32)', accent: 'var(--accent-amber)' },
+  bad: { bg: 'rgba(244, 63, 94, 0.08)', border: 'rgba(244, 63, 94, 0.32)', accent: 'var(--accent-rose)' }
+} as const;
 
 export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
   currentInput,
@@ -15,15 +29,51 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
 }) => {
   const [urlOrText, setUrlOrText] = useState<string>('');
   const [isCustomizing, setIsCustomizing] = useState<boolean>(false);
+  const [notice, setNotice] = useState<ParseNotice | null>(null);
+  const [highlightArea, setHighlightArea] = useState<boolean>(false);
 
   const handleParseInput = (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = parseIrishPropertyInput(urlOrText, currentInput);
-    onInputChange(updated);
+    if (!urlOrText.trim()) {
+      setNotice(null);
+      setHighlightArea(false);
+      return;
+    }
+
+    const result = parseIrishPropertyInput(urlOrText, currentInput);
+    const { input, extracted, isUrl, warning } = result;
+
+    const read: string[] = [];
+    if (extracted.price) read.push(`€${input.priceEur.toLocaleString()}`);
+    if (extracted.beds) read.push(`${input.beds} bed${input.beds === 1 ? '' : 's'}`);
+    if (extracted.area) read.push(`${input.sqft.toLocaleString()} sq ft`);
+
+    const missing: string[] = [];
+    if (!extracted.price) missing.push(`price — sticking with €${input.priceEur.toLocaleString()}`);
+    if (!extracted.beds) missing.push(`bed count — sticking with ${input.beds}`);
+    if (!extracted.area) missing.push(`floor area — assuming ${input.sqft.toLocaleString()} sq ft`);
+
+    const tone: ParseNotice['tone'] = warning || read.length === 0 ? 'bad' : missing.length > 0 ? 'warn' : 'good';
+
+    setNotice({ tone, read, missing, warning, areaUnknown: !extracted.area });
+
+    // The whole comparison hinges on floor area. If a pasted listing didn't give
+    // us one, open the manual panel and point at the field rather than quietly
+    // reusing whatever was there before.
+    if (!extracted.area && isUrl) {
+      setIsCustomizing(true);
+      setHighlightArea(true);
+    } else {
+      setHighlightArea(false);
+    }
+
+    onInputChange(input);
   };
 
   const handlePresetSelect = (preset: PresetProperty) => {
     setUrlOrText('');
+    setNotice(null);
+    setHighlightArea(false);
     onInputChange(preset.input);
   };
 
@@ -62,6 +112,95 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
           </button>
         </div>
       </form>
+
+      {/* Parse Honesty Notice — exactly what we managed to read, and what we made up */}
+      {notice && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px',
+            padding: '12px 16px',
+            marginBottom: '20px',
+            background: NOTICE_TONES[notice.tone].bg,
+            border: `1px solid ${NOTICE_TONES[notice.tone].border}`,
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.88rem',
+            lineHeight: 1.55
+          }}
+        >
+          <span style={{ flexShrink: 0, marginTop: '2px' }}>
+            {notice.tone === 'good'
+              ? <CheckCircle2 size={18} color={NOTICE_TONES.good.accent} />
+              : <AlertTriangle size={18} color={NOTICE_TONES[notice.tone].accent} />}
+          </span>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {notice.warning && (
+              <p style={{ fontWeight: 700, color: NOTICE_TONES[notice.tone].accent, marginBottom: notice.read.length || notice.missing.length ? '6px' : 0 }}>
+                {notice.warning}
+              </p>
+            )}
+
+            {notice.read.length > 0 && (
+              <p style={{ color: 'var(--text-secondary)' }}>
+                <strong style={{ color: NOTICE_TONES[notice.tone].accent }}>Read from your input:</strong>{' '}
+                {notice.read.join(', ')}.
+              </p>
+            )}
+
+            {notice.read.length === 0 && !notice.warning && (
+              <p style={{ fontWeight: 700, color: NOTICE_TONES.bad.accent }}>
+                Couldn't read a single thing from that. Every number below is still the last one you picked.
+              </p>
+            )}
+
+            {notice.missing.length > 0 && (
+              <p style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
+                Couldn't read the {notice.missing.join('; ')}.
+              </p>
+            )}
+
+            {notice.areaUnknown && (
+              <p style={{ color: 'var(--text-muted)', marginTop: '6px', fontStyle: 'italic' }}>
+                Floor area drives every comparison on this page, so an assumed one makes the whole thing
+                a confident work of fiction. Pop the real number into <strong style={{ color: 'var(--accent-amber)' }}>Approx Floor Space</strong> below.
+                {!isCustomizing && (
+                  <>
+                    {' '}
+                    <button
+                      onClick={() => { setIsCustomizing(true); setHighlightArea(true); }}
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.75rem', padding: '3px 10px', marginLeft: '4px', verticalAlign: 'middle' }}
+                    >
+                      Open Fine-Tune Specs
+                    </button>
+                  </>
+                )}
+              </p>
+            )}
+          </div>
+
+          <button
+            onClick={() => setNotice(null)}
+            aria-label="Dismiss parse notice"
+            title="Dismiss"
+            style={{
+              flexShrink: 0,
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '2px',
+              lineHeight: 0
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Presets Row */}
       <div style={{ marginBottom: '20px' }}>
@@ -118,13 +257,41 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Approx Floor Space (Sq Ft)</label>
+            <label
+              htmlFor="floor-area-input"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '0.8rem',
+                color: highlightArea ? 'var(--accent-amber)' : 'var(--text-muted)',
+                fontWeight: highlightArea ? 700 : 400,
+                marginBottom: '4px'
+              }}
+            >
+              {highlightArea && <AlertTriangle size={13} />}
+              Approx Floor Space (Sq Ft)
+            </label>
             <input
+              id="floor-area-input"
               type="number"
               value={currentInput.sqft}
-              onChange={(e) => onInputChange({ ...currentInput, sqft: Math.max(200, parseInt(e.target.value) || 500) })}
+              onChange={(e) => {
+                setHighlightArea(false);
+                onInputChange({ ...currentInput, sqft: Math.max(200, parseInt(e.target.value) || 500) });
+              }}
               className="input-field"
+              autoFocus={highlightArea}
+              style={highlightArea ? {
+                borderColor: 'var(--accent-amber)',
+                boxShadow: '0 0 0 3px rgba(245, 158, 11, 0.22)'
+              } : undefined}
             />
+            {highlightArea && (
+              <p style={{ fontSize: '0.72rem', color: 'var(--accent-amber)', marginTop: '4px' }}>
+                Guessed, not read. Fix this one and the rest stops lying.
+              </p>
+            )}
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Location in Ireland</label>

@@ -14,6 +14,20 @@ export interface IrishPropertyInput {
   features: string[];
 }
 
+/**
+ * Result of parsing a raw user input string (free text or a listing URL).
+ *
+ * `extracted` reports, per field, whether the value in `input` was ACTUALLY read
+ * from the raw input. A `false` flag means the value was inherited from the
+ * fallback, so the UI must not present it as something it understood.
+ */
+export interface ParseResult {
+  input: IrishPropertyInput;
+  extracted: { price: boolean; beds: boolean; area: boolean };
+  isUrl: boolean;
+  warning?: string;
+}
+
 export interface CityData {
   id: string;
   name: string;
@@ -25,6 +39,16 @@ export interface CityData {
   currencySymbol: string;
   exchangeRateFromEur: number; // 1 EUR in target currency
   pricePerSqM: number; // Average price in EUR per m2
+  pricePerSqMSource?: string; // Named, checkable citation for pricePerSqM
+  pricePerSqMAsOf?: string; // YYYY-MM-DD date the pricePerSqM figure was sourced
+  /**
+   * WHAT pricePerSqM measures. Apartment €/m² runs well above house €/m² in the
+   * same city, because a house spreads its price over more floor area — so mixing
+   * bases across cities silently corrupts the comparison. Record it per city and
+   * keep it consistent with `typicalBuilding`: a city whose archetype is a
+   * detached house should not be priced on apartment data.
+   */
+  pricePerSqMBasis?: 'house' | 'apartment' | 'all-dwellings' | 'blended';
   typicalBuilding: string;
   sunnyDaysPerYear: number;
   averageSummerTempC: number;
@@ -34,6 +58,7 @@ export interface CityData {
   sarcasticQuote: string;
   searchKeywords: string;
   portalSearchUrl: string;
+  fxAsOf?: string; // YYYY-MM-DD the exchangeRateFromEur figure was accurate
 }
 
 export interface ComparisonResult {
