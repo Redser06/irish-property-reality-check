@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CityData, IrishPropertyInput } from '../types';
+import { SQFT_PER_SQM } from './units';
 import {
   calculateComparison,
   parseIrishPropertyInput as parse,
@@ -121,11 +122,21 @@ describe('calculateComparison', () => {
     expect(dullerResult.remorseIndex).toBeLessThan(sunnierResult.remorseIndex);
   });
 
-  it('keeps estimatedSqM, estimatedSqFt and spaceMultiplier internally consistent (1 m2 = 10.7639 sq ft)', () => {
+  it('rounds m2 and sq ft independently from the exact value, not one from the other', () => {
     const city = makeCity({ pricePerSqM: 4000 });
     const result = calculateComparison(fallback, city);
 
-    expect(result.estimatedSqFt).toBeCloseTo(result.estimatedSqM * 10.7639, 0);
+    // 550,000 / 4,000 = 137.5 m2 exactly.
+    const exactSqM = fallback.priceEur / city.pricePerSqM;
+
+    expect(result.estimatedSqM).toBe(Math.round(exactSqM));
+    expect(result.estimatedSqFt).toBe(Math.round(exactSqM * SQFT_PER_SQM));
+
+    // Deriving sq ft from the ROUNDED m2 would give 1,485 here instead of 1,480 —
+    // the rounding error compounding through the conversion. The two figures must
+    // still agree to within one m2's worth of sq ft.
+    expect(Math.abs(result.estimatedSqFt - result.estimatedSqM * SQFT_PER_SQM))
+      .toBeLessThan(SQFT_PER_SQM);
 
     const expectedMultiplier = result.estimatedSqFt / (fallback.sqft || 900);
     expect(result.spaceMultiplier).toBeCloseTo(expectedMultiplier, 1);

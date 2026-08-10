@@ -1,10 +1,25 @@
 import { CityData, ComparisonResult, IrishPropertyInput, ParseResult } from '../types';
 import { DUBLIN_BASELINE } from '../data/baseline';
+import { FX_RATES } from '../data/generated/fx';
+import { SQFT_PER_SQM, sqFtToSqM, sqMToSqFt } from './units';
 
 /** Price of a pint of Guinness used for the "pints of space value" metric. */
 export const PINT_PRICE_EUR = 6.5;
 
-const SQFT_PER_SQM = 10.7639;
+/**
+ * Assumed floor area when the user's own is unknown. Every comparison on the
+ * page divides by this, so it is never silently correct — callers must treat a
+ * falsy `input.sqft` as an assumption and say so in the UI.
+ */
+export const FALLBACK_INPUT_SQFT = 900;
+
+/**
+ * Live ECB rate for the city's currency, falling back to the (deprecated)
+ * per-city literal if a currency ever appears that the FX artifact lacks.
+ */
+export function resolveFxRate(city: CityData): number {
+  return FX_RATES[city.currency] ?? city.exchangeRateFromEur;
+}
 
 // A residential asking price we are willing to believe.
 const MIN_PLAUSIBLE_PRICE = 50_000;
@@ -200,20 +215,23 @@ export function parseIrishPropertyInput(rawInput: string, fallbackInput: IrishPr
  * Calculates comparison analytics for a given city and Irish property input.
  */
 export function calculateComparison(input: IrishPropertyInput, city: CityData): ComparisonResult {
-  const convertedPrice = Math.round(input.priceEur * city.exchangeRateFromEur);
+  const convertedPrice = Math.round(input.priceEur * resolveFxRate(city));
 
-  // Calculate space in m2 based on local average pricePerSqM
-  const estimatedSqM = Math.round(input.priceEur / city.pricePerSqM);
-  const estimatedSqFt = Math.round(estimatedSqM * SQFT_PER_SQM);
+  // Space the budget buys at this city's price per m2. Both outputs are derived
+  // from the SAME exact value — rounding m2 first and then converting would
+  // compound the error into the sq ft figure.
+  const exactSqM = input.priceEur / city.pricePerSqM;
+  const estimatedSqM = Math.round(exactSqM);
+  const estimatedSqFt = Math.round(sqMToSqFt(exactSqM));
 
   // Calculate estimated rooms based on sqFt
   const estimatedBeds = Math.max(1, Math.round(estimatedSqFt / 350));
   const estimatedBaths = Math.max(1, Math.round(estimatedBeds * 0.8));
 
   // Space multiplier compared to user's Irish property
-  const inputSqFt = input.sqft || 900;
-  const inputSqM = inputSqFt / SQFT_PER_SQM;
-  const spaceMultiplier = parseFloat((estimatedSqFt / inputSqFt).toFixed(1));
+  const inputSqFt = input.sqft || FALLBACK_INPUT_SQFT;
+  const inputSqM = sqFtToSqM(inputSqFt);
+  const spaceMultiplier = parseFloat((sqMToSqFt(exactSqM) / inputSqFt).toFixed(1));
 
   // Sunny days relative to the Dublin baseline (single source of truth).
   const sunnyDaysDiff = city.sunnyDaysPerYear - DUBLIN_BASELINE.sunnyDaysPerYear;

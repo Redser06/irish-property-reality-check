@@ -1,6 +1,8 @@
 export type RegionCategory = 'All' | 'Ireland' | 'UK & Europe' | 'North America' | 'Middle East' | 'Australia';
 export type LaneFilter = 'all' | 'lane1' | 'lane2';
 
+export type CurrencyCode = 'EUR' | 'GBP' | 'USD' | 'AUD' | 'CAD' | 'AED';
+
 export interface IrishPropertyInput {
   url?: string;
   title: string;
@@ -35,8 +37,14 @@ export interface CityData {
   flagEmoji: string;
   region: 'Ireland' | 'UK & Europe' | 'North America' | 'Middle East' | 'Australia';
   lane: 1 | 2;
-  currency: 'EUR' | 'GBP' | 'USD' | 'AUD' | 'CAD' | 'AED';
+  currency: CurrencyCode;
   currencySymbol: string;
+  /**
+   * @deprecated Legacy fallback only. The live rate comes from
+   * `src/data/generated/fx.ts`, refreshed from the ECB feed — see
+   * `resolveFxRate()` in comparatorEngine. Kept so existing city literals and
+   * tests keep compiling; an invariant test asserts the two agree.
+   */
   exchangeRateFromEur: number; // 1 EUR in target currency
   pricePerSqM: number; // Average price in EUR per m2
   pricePerSqMSource?: string; // Named, checkable citation for pricePerSqM

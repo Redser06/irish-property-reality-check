@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { ComparisonResult, IrishPropertyInput } from '../types';
 import { DUBLIN_BASELINE } from '../data/baseline';
+import { SQFT_PER_SQM } from '../utils/units';
 import { X, Search, ExternalLink, Check, Copy, Flame, AlertTriangle } from 'lucide-react';
 
 interface CityDetailModalProps {
@@ -8,8 +9,6 @@ interface CityDetailModalProps {
   irishInput: IrishPropertyInput;
   onClose: () => void;
 }
-
-const SQFT_PER_SQM = 10.7639;
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -290,9 +289,20 @@ export const CityDetailModal: React.FC<CityDetailModalProps> = ({
               </tr>
               <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                 <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontWeight: 600 }}>Price per m²</td>
-                <td style={{ padding: '12px 16px' }}>€{irishPricePerSqM}/m²</td>
+                <td style={{ padding: '12px 16px' }}>
+                  €{irishPricePerSqM}/m²
+                  <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Dublin average €{DUBLIN_BASELINE.pricePerSqM.toLocaleString()}/m²
+                  </span>
+                </td>
                 <td style={{ padding: '12px 16px', fontWeight: 700 }}>
                   €{city.pricePerSqM.toLocaleString()}/m²
+                  {city.pricePerSqMBasis && (
+                    <span style={{ display: 'block', fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>
+                      {city.pricePerSqMBasis.replace('-', ' ')} basis
+                      {city.pricePerSqMAsOf ? `, ${city.pricePerSqMAsOf}` : ''}
+                    </span>
+                  )}
                 </td>
               </tr>
               <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>

@@ -7,6 +7,7 @@ import { CityCard } from './components/CityCard';
 import { CityDetailModal } from './components/CityDetailModal';
 import { IrishPropertyInput, LaneFilter, RegionCategory, ComparisonResult } from './types';
 import { CITIES_DATA, PRESET_PROPERTIES } from './data/citiesData';
+import { FX_AS_OF } from './data/generated/fx';
 import { calculateComparison } from './utils/comparatorEngine';
 
 // Counts are derived from the data, never hardcoded — add a city and the copy follows.
@@ -131,6 +132,10 @@ export const App: React.FC = () => {
         </p>
         <p style={{ fontSize: '0.75rem' }}>
           Estimates are based on average city price/m² benchmarks, real-time portal query structures, and satirical existential calculations.
+        </p>
+        <p style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+          Exchange rates: European Central Bank reference rates, {FX_AS_OF}. Each city&apos;s price/m² carries its own
+          source and date — open any city&apos;s detailed breakdown to see them.
         </p>
       </footer>
     </div>
