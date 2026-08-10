@@ -1,0 +1,20 @@
+{
+  "//": "The root tsconfig has include: ['src'], so api/ would never be typechecked. This config covers it: Node libs, no DOM, no JSX.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": false
+  },
+  "include": ["api"],
+  "exclude": ["api/**/*.test.ts"]
+}

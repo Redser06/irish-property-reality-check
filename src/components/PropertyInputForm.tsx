@@ -3,6 +3,7 @@ import { Search, Link as LinkIcon, Euro, Bed, Maximize2, MapPin, Sparkles, Refre
 import { FieldConfidence, InputConfidence, IrishPropertyInput, PresetProperty } from '../types';
 import { PRESET_PROPERTIES } from '../data/citiesData';
 import { parseIrishPropertyInput } from '../utils/comparatorEngine';
+import { fetchListingMeta, mergeListingMeta } from '../utils/listingMeta';
 
 interface ParseNotice {
   tone: 'good' | 'warn' | 'bad';
@@ -52,8 +53,9 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
   const [isCustomizing, setIsCustomizing] = useState<boolean>(false);
   const [notice, setNotice] = useState<ParseNotice | null>(null);
   const [highlightArea, setHighlightArea] = useState<boolean>(false);
+  const [isFetching, setIsFetching] = useState<boolean>(false);
 
-  const handleParseInput = (e: React.FormEvent) => {
+  const handleParseInput = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!urlOrText.trim()) {
       setNotice(null);
@@ -61,7 +63,22 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
       return;
     }
 
-    const result = parseIrishPropertyInput(urlOrText, currentInput);
+    const local = parseIrishPropertyInput(urlOrText, currentInput);
+
+    // For a URL, ask our own function to read the listing's Open Graph tags. This
+    // can only ever ADD to what the local parser managed; if it is blocked, slow,
+    // or not deployed, `result` stays exactly as it is now.
+    let result = local;
+    let usedOg = false;
+    if (local.isUrl) {
+      setIsFetching(true);
+      const meta = await fetchListingMeta(urlOrText);
+      setIsFetching(false);
+      const merged = mergeListingMeta(local, meta);
+      usedOg = merged !== local && (meta?.ok ?? false);
+      result = merged;
+    }
+
     const { input, extracted, isUrl, warning } = result;
 
     const read: string[] = [];
@@ -88,7 +105,10 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
       setHighlightArea(false);
     }
 
-    onInputChange(input, confidenceFromParse(extracted, isUrl));
+    onInputChange(input, {
+      ...confidenceFromParse(extracted, isUrl),
+      source: usedOg ? 'og' : isUrl ? 'url-slug' : 'free-text',
+    });
   };
 
   const handlePresetSelect = (preset: PresetProperty) => {
@@ -139,8 +159,14 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
             />
             <Search size={18} style={{ position: 'absolute', left: '16px', color: 'var(--text-muted)' }} />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ padding: '12px 24px' }}>
-            <Sparkles size={18} /> Reality Check Me!
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ padding: '12px 24px' }}
+            disabled={isFetching}
+            aria-busy={isFetching}
+          >
+            <Sparkles size={18} /> {isFetching ? 'Reading the listing…' : 'Reality Check Me!'}
           </button>
         </div>
       </form>

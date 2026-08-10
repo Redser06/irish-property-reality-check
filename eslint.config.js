@@ -31,6 +31,17 @@ export default tseslint.config(
     },
   },
   {
+    // Server-side code: Node globals, no DOM, and React rules do not apply.
+    files: ['api/**/*.ts', 'tools/**/*.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
     // Test files run under Vitest globals, not the browser-only DOM globals.
     files: ['**/*.test.ts', '**/*.test.tsx'],
     languageOptions: {
