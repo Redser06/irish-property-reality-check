@@ -55,6 +55,66 @@ export interface CityPriceMatrix {
   byZone?: Partial<Record<UrbanZone, ZoneBands>>;
 }
 
+/* ---------------------------------------------------------------------------
+ * Total cost of ownership
+ * ------------------------------------------------------------------------ */
+
+export interface TaxBand {
+  /** Upper bound of this band in EUR; null means "and above". */
+  upToEur: number | null;
+  ratePct: number;
+}
+
+export type PurchaseTax =
+  | { model: 'flat-pct'; ratePct: number }
+  | { model: 'bands'; bands: TaxBand[] };
+
+export type RecurringTax =
+  /** A percentage of value each year — Irish LPT, US mill rates. */
+  | { model: 'rate-of-value'; ratePct: number }
+  /** A flat annual charge — UK council tax and similar, approximated. */
+  | { model: 'flat'; annualEur: number }
+  | { model: 'none' };
+
+export interface CityCosts {
+  purchase: {
+    transferTax: PurchaseTax;
+    /** Legal, survey, registration — the fees nobody budgets for. */
+    fixedFeesEur: number;
+  };
+  holding: {
+    recurringPropertyTax: RecurringTax;
+    /** Applied to apartments only; houses rarely carry one. */
+    serviceChargeEurPerSqMYear?: number;
+    insuranceEurPerYear: number;
+    /**
+     * Energy modelled as typical consumption for THIS city's housing stock —
+     * never by propagating the user's Irish BER abroad, which would be a guess
+     * about a building that does not exist. Includes cooling where it dominates.
+     */
+    energy: { typicalKWhPerSqMYear: number; eurPerKWh: number };
+  };
+  source: string;
+  asOf: string;
+  confidence: Confidence;
+}
+
+export interface OwnershipCostLine {
+  label: string;
+  annualEur: number;
+}
+
+export interface OwnershipCost {
+  /** Transfer tax plus fixed fees, paid once on the way in. */
+  upfrontEur: number;
+  annualEur: number;
+  /** Nominal and undiscounted — the UI must say so. */
+  tenYearTotalEur: number;
+  breakdown: OwnershipCostLine[];
+  confidence: Confidence;
+  source: string;
+}
+
 /** Which band the engine actually used, and how far it had to fall back to find one. */
 export interface BandSelection {
   requested: { kind?: PropertyKind; zone?: UrbanZone };
@@ -137,6 +197,8 @@ export interface CityData {
    * figures; everything else falls back to the flat pricePerSqM above.
    */
   priceMatrix?: CityPriceMatrix;
+  /** Cost of buying and holding. Optional: absent means the card shows no TCO. */
+  costs?: CityCosts;
   typicalBuilding: string;
   sunnyDaysPerYear: number;
   averageSummerTempC: number;
@@ -169,6 +231,8 @@ export interface ComparisonResult {
    * where its numbers came from is the defect this app already shipped once.
    */
   provenance: ResultProvenance;
+  /** Present only for cities with a `costs` entry. */
+  ownership?: OwnershipCost;
 }
 
 export interface PresetProperty {

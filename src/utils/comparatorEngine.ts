@@ -14,6 +14,7 @@ import {
 import { DUBLIN_BASELINE } from '../data/baseline';
 import { FX_RATES } from '../data/generated/fx';
 import { SQFT_PER_SQM, sqFtToSqM, sqMToSqFt } from './units';
+import { calculateOwnership } from './ownership';
 
 /** Price of a pint of Guinness used for the "pints of space value" metric. */
 export const PINT_PRICE_EUR = 6.5;
@@ -446,6 +447,9 @@ export function calculateComparison(
     highlightedPerk,
     googleSearchUrl,
     portalSearchUrl: city.portalSearchUrl,
-    provenance: buildProvenance(bandSelection, inputConfidence)
+    provenance: buildProvenance(bandSelection, inputConfidence),
+    // Costed on the space the budget actually buys THERE, not on the Irish
+    // property's floor area — a bigger house costs more to heat and insure.
+    ownership: city.costs ? calculateOwnership(input.priceEur, estimatedSqM, kind, city.costs) : undefined
   };
 }

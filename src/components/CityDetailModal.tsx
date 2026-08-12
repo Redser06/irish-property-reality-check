@@ -348,6 +348,45 @@ export const CityDetailModal: React.FC<CityDetailModalProps> = ({
           </p>
         </div>
 
+        {/* What it costs to actually hold, not just to buy. */}
+        {comparison.ownership && (
+          <div style={{
+            background: 'rgba(6, 182, 212, 0.06)',
+            border: '1px solid rgba(6, 182, 212, 0.25)',
+            padding: '18px',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '24px'
+          }}>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '10px' }}>
+              Cost to own in {city.name}
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Upfront taxes &amp; fees</div>
+                <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>€{comparison.ownership.upfrontEur.toLocaleString()}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Every year</div>
+                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--accent-cyan)' }}>
+                  €{comparison.ownership.annualEur.toLocaleString()}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Over 10 years</div>
+                <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>€{comparison.ownership.tenYearTotalEur.toLocaleString()}</div>
+              </div>
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+              {comparison.ownership.breakdown.map((line) => (
+                <li key={line.label}>{line.label}: €{line.annualEur.toLocaleString()}/yr</li>
+              ))}
+            </ul>
+            <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '10px' }}>
+              Nominal, undiscounted, and modelled at country level — {comparison.ownership.confidence}. {comparison.ownership.source}
+            </p>
+          </div>
+        )}
+
         {/* Where these numbers came from. Every figure on this page divides by the
             band below, so it gets stated plainly rather than buried in a tooltip. */}
         <div style={{

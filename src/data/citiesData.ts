@@ -1,5 +1,6 @@
 import { CityData, PresetProperty } from '../types';
 import { KIND_BANDS } from './generated/priceMatrix';
+import { COSTS_BY_COUNTRY } from './ownershipCosts';
 
 const RAW_CITIES: CityData[] = [
   // LANE 1: IRELAND & NORTHERN IRELAND
@@ -647,11 +648,13 @@ const RAW_CITIES: CityData[] = [
  * once with the price/m2 basis.
  */
 function withPriceMatrix(city: CityData): CityData {
+  const costs = COSTS_BY_COUNTRY[city.country];
   const generated = KIND_BANDS[city.id];
-  if (!generated) return city;
+  if (!generated) return costs ? { ...city, costs } : city;
 
   return {
     ...city,
+    ...(costs ? { costs } : {}),
     priceMatrix: {
       default: {
         pricePerSqM: city.pricePerSqM,

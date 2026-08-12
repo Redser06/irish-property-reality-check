@@ -30,7 +30,7 @@ export const App: React.FC = () => {
   // Filters & Sorting
   const [activeLane, setActiveLane] = useState<LaneFilter>('all');
   const [activeRegion, setActiveRegion] = useState<RegionCategory>('All');
-  const [sortBy, setSortBy] = useState<'remorse' | 'space' | 'sun' | 'price'>('remorse');
+  const [sortBy, setSortBy] = useState<'remorse' | 'space' | 'sun' | 'price' | 'tco'>('remorse');
 
   // Selected Modal
   const [selectedCityModal, setSelectedCityModal] = useState<ComparisonResult | null>(null);
@@ -69,6 +69,12 @@ export const App: React.FC = () => {
       }
       if (sortBy === 'price') {
         return a.city.pricePerSqM - b.city.pricePerSqM;
+      }
+      if (sortBy === 'tco') {
+        // Cities without cost data sort last rather than pretending to be free.
+        const av = a.ownership?.tenYearTotalEur ?? Number.POSITIVE_INFINITY;
+        const bv = b.ownership?.tenYearTotalEur ?? Number.POSITIVE_INFINITY;
+        return av - bv;
       }
       return 0;
     });
