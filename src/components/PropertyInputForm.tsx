@@ -4,6 +4,7 @@ import { FieldConfidence, InputConfidence, IrishPropertyInput, PresetProperty } 
 import { PRESET_PROPERTIES } from '../data/citiesData';
 import { parseIrishPropertyInput } from '../utils/comparatorEngine';
 import { fetchListingMeta, mergeListingMeta } from '../utils/listingMeta';
+import { ZONE_OPTIONS, suggestZoneFromLocation } from '../utils/zones';
 
 interface ParseNotice {
   tone: 'good' | 'warn' | 'bad';
@@ -356,9 +357,41 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
             <input
               type="text"
               value={currentInput.location}
-              onChange={(e) => handleManualEdit({ location: e.target.value })}
+              onChange={(e) => {
+                const location = e.target.value;
+                // Offer a ring based on what they typed, but never overwrite a
+                // choice they have already made themselves.
+                const suggested = suggestZoneFromLocation(location);
+                handleManualEdit(
+                  currentInput.zone ? { location } : { location, zone: suggested },
+                );
+              }}
               className="input-field"
             />
+          </div>
+
+          <div>
+            <label
+              htmlFor="zone-select"
+              style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}
+            >
+              Journey to the city centre
+            </label>
+            <select
+              id="zone-select"
+              value={currentInput.zone ?? ''}
+              onChange={(e) => handleManualEdit({ zone: (e.target.value || undefined) as typeof currentInput.zone })}
+              className="input-field"
+              style={{ background: 'rgba(15, 23, 42, 0.9)' }}
+            >
+              <option value="">Not sure</option>
+              {ZONE_OPTIONS.map((z) => (
+                <option key={z.id} value={z.id}>{z.label} — {z.hint}</option>
+              ))}
+            </select>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Compares your ring against the same ring elsewhere, rather than a whole-city average.
+            </p>
           </div>
         </div>
       )}
