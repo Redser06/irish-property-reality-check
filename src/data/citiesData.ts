@@ -1,6 +1,7 @@
 import { CityData, PresetProperty } from '../types';
+import { KIND_BANDS } from './generated/priceMatrix';
 
-export const CITIES_DATA: CityData[] = [
+const RAW_CITIES: CityData[] = [
   // LANE 1: IRELAND & NORTHERN IRELAND
   {
     id: 'galway',
@@ -12,10 +13,10 @@ export const CITIES_DATA: CityData[] = [
     currency: 'EUR',
     currencySymbol: '€',
     exchangeRateFromEur: 1,
-    pricePerSqM: 3200,
-    pricePerSqMSource: 'Editorial estimate on a HOUSE basis, pending a sourced house EUR/m2 figure. A Numbeo apartment figure (~EUR 4700/m2) was researched and rejected: apartment EUR/m2 materially overstates cost for this city\u2019s detached/terraced-house archetype.',
-    pricePerSqMAsOf: '2026-07-25',
-    pricePerSqMConfidence: 'estimated',
+    pricePerSqM: 4151,
+    pricePerSqMSource: 'CSO PxStat HPM05 median house price for Galway City (2025 June to 2026 May mean of monthly medians, market-based household purchases), divided by an assumed typical house floor area of 110 m2',
+    pricePerSqMAsOf: '2026-08-12',
+    pricePerSqMConfidence: 'indexed',
     pricePerSqMBasis: 'house',
     typicalBuilding: 'Coastal Stone Cottage or Modern Salthill Townhouse',
     sunnyDaysPerYear: 125,
@@ -37,10 +38,10 @@ export const CITIES_DATA: CityData[] = [
     currency: 'EUR',
     currencySymbol: '€',
     exchangeRateFromEur: 1,
-    pricePerSqM: 2600,
-    pricePerSqMSource: 'Editorial estimate on a HOUSE basis, pending a sourced house EUR/m2 figure. A Numbeo apartment figure (~EUR 2707/m2) was researched and rejected: apartment EUR/m2 materially overstates cost for this city\u2019s detached/terraced-house archetype.',
-    pricePerSqMAsOf: '2026-06-19',
-    pricePerSqMConfidence: 'estimated',
+    pricePerSqM: 3037,
+    pricePerSqMSource: 'CSO PxStat HPM05 median house price for Limerick City (2025 June to 2026 May mean of monthly medians, market-based household purchases), divided by an assumed typical house floor area of 110 m2',
+    pricePerSqMAsOf: '2026-08-12',
+    pricePerSqMConfidence: 'indexed',
     pricePerSqMBasis: 'house',
     typicalBuilding: 'Georgian Redbrick or Spacious Suburb Bungalow in Castletroy',
     sunnyDaysPerYear: 130,
@@ -62,10 +63,10 @@ export const CITIES_DATA: CityData[] = [
     currency: 'EUR',
     currencySymbol: '€',
     exchangeRateFromEur: 1,
-    pricePerSqM: 3400,
-    pricePerSqMSource: 'Editorial estimate on a HOUSE basis, pending a sourced house EUR/m2 figure. A Numbeo apartment figure (~EUR 3558/m2) was researched and rejected: apartment EUR/m2 materially overstates cost for this city\u2019s detached/terraced-house archetype.',
-    pricePerSqMAsOf: '2026-08-05',
-    pricePerSqMConfidence: 'estimated',
+    pricePerSqM: 3358,
+    pricePerSqMSource: 'CSO PxStat HPM05 median house price for Cork City (2025 June to 2026 May mean of monthly medians, market-based household purchases), divided by an assumed typical house floor area of 110 m2',
+    pricePerSqMAsOf: '2026-08-12',
+    pricePerSqMConfidence: 'indexed',
     pricePerSqMBasis: 'house',
     typicalBuilding: 'Victorian Hillside Villa in Montenotte or Kinsale Coastal Pad',
     sunnyDaysPerYear: 135,
@@ -636,6 +637,35 @@ export const CITIES_DATA: CityData[] = [
     portalSearchUrl: 'https://www.redfin.com/city/17151/CA/San-Francisco'
   }
 ];
+
+/**
+ * Attaches the generated property-kind bands to the cities that have them.
+ *
+ * `default` is built from the flat fields rather than restated, so the invariant
+ * `priceMatrix.default.pricePerSqM === pricePerSqM` holds by construction and
+ * cannot drift — the two-disagreeing-numbers failure mode this repo already hit
+ * once with the price/m2 basis.
+ */
+function withPriceMatrix(city: CityData): CityData {
+  const generated = KIND_BANDS[city.id];
+  if (!generated) return city;
+
+  return {
+    ...city,
+    priceMatrix: {
+      default: {
+        pricePerSqM: city.pricePerSqM,
+        basis: city.pricePerSqMBasis ?? 'blended',
+        source: city.pricePerSqMSource ?? 'Unsourced editorial estimate',
+        asOf: city.pricePerSqMAsOf ?? 'unknown',
+        confidence: city.pricePerSqMConfidence ?? 'estimated',
+      },
+      byKind: generated.byKind,
+    },
+  };
+}
+
+export const CITIES_DATA: CityData[] = RAW_CITIES.map(withPriceMatrix);
 
 export const PRESET_PROPERTIES: PresetProperty[] = [
   {

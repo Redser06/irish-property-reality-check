@@ -223,6 +223,22 @@ export function parseIrishPropertyInput(rawInput: string, fallbackInput: IrishPr
   return { input, extracted, isUrl: looksLikeUrl, warning };
 }
 
+/**
+ * Normalises the free-text propertyType into the kind axis.
+ *
+ * Order matters: "Semi-Detached" contains "detached", so semi must be tested
+ * first or every semi in the dataset silently prices as a detached house.
+ */
+export function normalisePropertyKind(propertyType: string | undefined): PropertyKind | undefined {
+  if (!propertyType) return undefined;
+  const t = propertyType.toLowerCase();
+  if (/\bsemi\b|semi-?detached/.test(t)) return 'semi';
+  if (/terrace/.test(t)) return 'terrace';
+  if (/apart|flat|flatlet|condo|duplex|studio/.test(t)) return 'apartment';
+  if (/detached|bungalow|villa|cottage|house/.test(t)) return 'detached';
+  return undefined;
+}
+
 /** Input confidence used when a caller has no better information (e.g. a preset). */
 export const PRESET_INPUT_CONFIDENCE: InputConfidence = {
   price: 'preset',
@@ -339,7 +355,8 @@ export function calculateComparison(
   options?: { inputConfidence?: InputConfidence },
 ): ComparisonResult {
   const inputConfidence = options?.inputConfidence ?? PRESET_INPUT_CONFIDENCE;
-  const bandSelection = resolvePriceBand(city, { kind: input.kind, zone: input.zone });
+  const kind = input.kind ?? normalisePropertyKind(input.propertyType);
+  const bandSelection = resolvePriceBand(city, { kind, zone: input.zone });
   const convertedPrice = Math.round(input.priceEur * resolveFxRate(city));
 
   // Space the budget buys at this city's price per m2. Both outputs are derived

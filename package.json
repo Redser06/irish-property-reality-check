@@ -11,7 +11,9 @@
     "test": "vitest",
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.api.json --noEmit",
-    "ingest:fx": "tsx tools/ingest/fetchEcbRates.ts && tsx tools/ingest/syncCityFxLiterals.ts"
+    "ingest:fx": "tsx tools/ingest/fetchEcbRates.ts && tsx tools/ingest/syncCityFxLiterals.ts",
+    "ingest:prices": "tsx tools/ingest/buildPriceMatrix.ts && tsx tools/ingest/applyCsoDefaults.ts",
+    "ingest": "npm run ingest:fx && npm run ingest:prices"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
