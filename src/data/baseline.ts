@@ -1,10 +1,12 @@
 /**
  * Dublin baseline data — the reference point every city comparison is measured against.
  *
- * This is the authoritative source for the Dublin figures used across the app
- * (currently hardcoded as the literal `140` in src/utils/comparatorEngine.ts and
- * src/components/CityDetailModal.tsx — wiring those to import from here is a
- * follow-up change, out of scope for this file per the remediation brief).
+ * This is the authoritative source for the Dublin figures used across the app.
+ * `sunnyDaysPerYear` is consumed by comparatorEngine.calculateComparison and
+ * rendered by CityDetailModal.
+ *
+ * Exchange rates are NOT here: they live in src/data/generated/fx.ts, refreshed
+ * from the ECB's free daily feed via tools/ingest/fetchEcbRates.ts.
  */
 export const DUBLIN_BASELINE = {
   /**
@@ -28,25 +30,10 @@ export const DUBLIN_BASELINE = {
 } as const;
 
 /**
- * FX_AS_OF documents when the exchange rates in citiesData.ts were roughly
- * accurate. The rates themselves were NOT changed as part of this pass — a later
- * phase moves them to the ECB's free daily feed. This date is an ESTIMATE, derived
- * from internal consistency, not a verified capture date:
- *   - exchangeRateFromEur for USD is 1.09
- *   - exchangeRateFromEur for AED is 4.00, which equals 1.09 × 3.6725 (the fixed
- *     AED/USD peg), confirming the AED rate was derived FROM the 1.09 USD rate
- *   - EUR/USD last traded consistently around 1.09 in late Jan / early Feb 2025
- *     (it opened 2025 near 1.03–1.04 and rose from there); it has not been at
- *     1.09 since, trading at ~1.13 for most of 2025 and ~1.15–1.16 by Aug 2026
- *
- * STALENESS CHECK (as of 2026-08-09, today's actual mid-market rates):
- *   - EUR/USD: file says 1.09, actual ≈1.1555 → file is ~6% stale (EUR understated)
- *   - EUR/GBP: file says 0.85, actual ≈0.857 → close, ~1% stale
- *   - EUR/AUD: file says 1.65, actual ≈1.638 → close, <1% stale
- *   - EUR/CAD: file says 1.48, actual ≈1.617 → file is ~9% stale (largest gap)
- *   - EUR/AED: file says 4.00, actual ≈4.244 (via USD peg) → ~6% stale, tracks USD
- * GBP and AUD are still reasonably close to today's real rates; USD, AED, and
- * especially CAD have drifted materially and should be prioritised when this
- * moves to a live ECB feed.
+ * Historical note. Until 2026-08-10 the exchange rates were hardcoded per city and
+ * roughly 18 months stale — EUR/USD sat at 1.09 against ~1.1555 actual (~6% out) and
+ * EUR/CAD at 1.48 against ~1.6108 (~8.8% out). That error was larger than the effect
+ * of any modelling improvement layered on top of it, so rates moved to the ECB's free
+ * daily feed. See src/data/generated/fx.ts for the live values and their quote date,
+ * and tools/ingest/fetchEcbRates.ts for the refresh.
  */
-export const FX_AS_OF = '2025-02-01';

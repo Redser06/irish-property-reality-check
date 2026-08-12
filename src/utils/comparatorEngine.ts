@@ -1,10 +1,38 @@
-import { CityData, ComparisonResult, IrishPropertyInput, ParseResult } from '../types';
+import {
+  BandSelection,
+  CityData,
+  ComparisonResult,
+  FieldConfidence,
+  InputConfidence,
+  IrishPropertyInput,
+  ParseResult,
+  PriceBand,
+  PropertyKind,
+  ResultProvenance,
+  UrbanZone,
+} from '../types';
 import { DUBLIN_BASELINE } from '../data/baseline';
+import { FX_RATES } from '../data/generated/fx';
+import { SQFT_PER_SQM, sqFtToSqM, sqMToSqFt } from './units';
+import { calculateOwnership } from './ownership';
 
 /** Price of a pint of Guinness used for the "pints of space value" metric. */
 export const PINT_PRICE_EUR = 6.5;
 
-const SQFT_PER_SQM = 10.7639;
+/**
+ * Assumed floor area when the user's own is unknown. Every comparison on the
+ * page divides by this, so it is never silently correct — callers must treat a
+ * falsy `input.sqft` as an assumption and say so in the UI.
+ */
+export const FALLBACK_INPUT_SQFT = 900;
+
+/**
+ * Live ECB rate for the city's currency, falling back to the (deprecated)
+ * per-city literal if a currency ever appears that the FX artifact lacks.
+ */
+export function resolveFxRate(city: CityData): number {
+  return FX_RATES[city.currency] ?? city.exchangeRateFromEur;
+}
 
 // A residential asking price we are willing to believe.
 const MIN_PLAUSIBLE_PRICE = 50_000;
@@ -197,23 +225,156 @@ export function parseIrishPropertyInput(rawInput: string, fallbackInput: IrishPr
 }
 
 /**
+ * Normalises the free-text propertyType into the kind axis.
+ *
+ * Order matters: "Semi-Detached" contains "detached", so semi must be tested
+ * first or every semi in the dataset silently prices as a detached house.
+ */
+export function normalisePropertyKind(propertyType: string | undefined): PropertyKind | undefined {
+  if (!propertyType) return undefined;
+  const t = propertyType.toLowerCase();
+  if (/\bsemi\b|semi-?detached/.test(t)) return 'semi';
+  if (/terrace/.test(t)) return 'terrace';
+  if (/apart|flat|flatlet|condo|duplex|studio/.test(t)) return 'apartment';
+  if (/detached|bungalow|villa|cottage|house/.test(t)) return 'detached';
+  return undefined;
+}
+
+/** Input confidence used when a caller has no better information (e.g. a preset). */
+export const PRESET_INPUT_CONFIDENCE: InputConfidence = {
+  price: 'preset',
+  beds: 'preset',
+  area: 'preset',
+  source: 'preset',
+};
+
+/**
+ * Picks the best available price band for what the caller asked for, and reports
+ * how far it had to fall back.
+ *
+ * The ladder is: exact (zone + kind) -> zone-only -> kind-only -> city default ->
+ * synthesised from the flat legacy fields. That last rung is what lets cities with
+ * no price matrix work with no data migration: every result gets a band, always.
+ */
+export function resolvePriceBand(
+  city: CityData,
+  want: { kind?: PropertyKind; zone?: UrbanZone } = {},
+): BandSelection {
+  const matrix = city.priceMatrix;
+  const requested = { kind: want.kind, zone: want.zone };
+
+  if (matrix) {
+    const zoneBands = want.zone ? matrix.byZone?.[want.zone] : undefined;
+
+    if (zoneBands && want.kind) {
+      const band = zoneBands.byKind?.[want.kind];
+      if (band) {
+        return { requested, resolved: { kind: want.kind, zone: want.zone }, fallbackLevel: 'exact', band };
+      }
+    }
+    if (zoneBands) {
+      return { requested, resolved: { zone: want.zone }, fallbackLevel: 'zone-only', band: zoneBands.all };
+    }
+    if (want.kind) {
+      const band = matrix.byKind?.[want.kind];
+      if (band) {
+        return { requested, resolved: { kind: want.kind }, fallbackLevel: 'kind-only', band };
+      }
+    }
+    return { requested, resolved: {}, fallbackLevel: 'city-default', band: matrix.default };
+  }
+
+  // No matrix: synthesise a band from the flat legacy fields so downstream code
+  // never has to special-case "this city has no matrix".
+  return {
+    requested,
+    resolved: {},
+    fallbackLevel: 'city-default',
+    band: {
+      pricePerSqM: city.pricePerSqM,
+      basis: city.pricePerSqMBasis ?? 'blended',
+      source: city.pricePerSqMSource ?? 'Unsourced editorial estimate',
+      asOf: city.pricePerSqMAsOf ?? 'unknown',
+      confidence: city.pricePerSqMConfidence ?? 'estimated',
+    },
+  };
+}
+
+const CONFIDENCE_RANK: Record<'high' | 'medium' | 'low', number> = { high: 2, medium: 1, low: 0 };
+
+function bandConfidenceLevel(band: PriceBand): 'high' | 'medium' | 'low' {
+  if (band.confidence === 'measured') return 'high';
+  if (band.confidence === 'indexed') return 'medium';
+  return 'low';
+}
+
+function areaConfidenceLevel(area: FieldConfidence): 'high' | 'medium' | 'low' {
+  if (area === 'read' || area === 'entered') return 'high';
+  if (area === 'preset') return 'medium';
+  return 'low';
+}
+
+/**
+ * Rolls confidence up as the weakest link.
+ *
+ * Floor area dominates deliberately: it is the divisor on both sides of
+ * spaceMultiplier, so an assumed area makes every derived figure on the card soft
+ * no matter how good the city's price data is.
+ */
+function buildProvenance(band: BandSelection, input: InputConfidence): ResultProvenance {
+  const caveats: string[] = [];
+
+  const levels: Array<'high' | 'medium' | 'low'> = [
+    bandConfidenceLevel(band.band),
+    areaConfidenceLevel(input.area),
+    band.fallbackLevel === 'exact' ? 'high' : 'medium',
+  ];
+
+  if (input.area === 'assumed') {
+    caveats.push('Floor area was assumed, not read — every space figure here moves if you correct it');
+  } else if (input.area === 'preset') {
+    caveats.push('Floor area comes from the sample property, not your own');
+  }
+  if (input.price === 'assumed') caveats.push('Price was not read from your input');
+  if (band.band.confidence === 'estimated') caveats.push('This city has an editorial price estimate, not sourced data');
+  else if (band.band.confidence === 'indexed') caveats.push('Priced on asking-price/aggregate data rather than recorded sales');
+  if (band.fallbackLevel === 'city-default' && (band.requested.zone || band.requested.kind)) {
+    caveats.push('No matching property type or area data for this city — using the city average');
+  }
+
+  const overall = levels.reduce((worst, l) => (CONFIDENCE_RANK[l] < CONFIDENCE_RANK[worst] ? l : worst), 'high' as const);
+
+  return { band, input, overall, caveats };
+}
+
+/**
  * Calculates comparison analytics for a given city and Irish property input.
  */
-export function calculateComparison(input: IrishPropertyInput, city: CityData): ComparisonResult {
-  const convertedPrice = Math.round(input.priceEur * city.exchangeRateFromEur);
+export function calculateComparison(
+  input: IrishPropertyInput,
+  city: CityData,
+  options?: { inputConfidence?: InputConfidence },
+): ComparisonResult {
+  const inputConfidence = options?.inputConfidence ?? PRESET_INPUT_CONFIDENCE;
+  const kind = input.kind ?? normalisePropertyKind(input.propertyType);
+  const bandSelection = resolvePriceBand(city, { kind, zone: input.zone });
+  const convertedPrice = Math.round(input.priceEur * resolveFxRate(city));
 
-  // Calculate space in m2 based on local average pricePerSqM
-  const estimatedSqM = Math.round(input.priceEur / city.pricePerSqM);
-  const estimatedSqFt = Math.round(estimatedSqM * SQFT_PER_SQM);
+  // Space the budget buys at this city's price per m2. Both outputs are derived
+  // from the SAME exact value — rounding m2 first and then converting would
+  // compound the error into the sq ft figure.
+  const exactSqM = input.priceEur / bandSelection.band.pricePerSqM;
+  const estimatedSqM = Math.round(exactSqM);
+  const estimatedSqFt = Math.round(sqMToSqFt(exactSqM));
 
   // Calculate estimated rooms based on sqFt
   const estimatedBeds = Math.max(1, Math.round(estimatedSqFt / 350));
   const estimatedBaths = Math.max(1, Math.round(estimatedBeds * 0.8));
 
   // Space multiplier compared to user's Irish property
-  const inputSqFt = input.sqft || 900;
-  const inputSqM = inputSqFt / SQFT_PER_SQM;
-  const spaceMultiplier = parseFloat((estimatedSqFt / inputSqFt).toFixed(1));
+  const inputSqFt = input.sqft || FALLBACK_INPUT_SQFT;
+  const inputSqM = sqFtToSqM(inputSqFt);
+  const spaceMultiplier = parseFloat((sqMToSqFt(exactSqM) / inputSqFt).toFixed(1));
 
   // Sunny days relative to the Dublin baseline (single source of truth).
   const sunnyDaysDiff = city.sunnyDaysPerYear - DUBLIN_BASELINE.sunnyDaysPerYear;
@@ -257,7 +418,7 @@ export function calculateComparison(input: IrishPropertyInput, city: CityData): 
   // answer (the space is worth that many pints less) — consumers should render
   // the sign rather than assume a "+".
   const extraSqM = estimatedSqM - inputSqM;
-  const guinnessEquivPints = Math.round((extraSqM * city.pricePerSqM) / PINT_PRICE_EUR);
+  const guinnessEquivPints = Math.round((extraSqM * bandSelection.band.pricePerSqM) / PINT_PRICE_EUR);
 
   // Perk highlight based on space & sun
   let highlightedPerk = city.samplePerks[0];
@@ -285,6 +446,10 @@ export function calculateComparison(input: IrishPropertyInput, city: CityData): 
     guinnessEquivPints,
     highlightedPerk,
     googleSearchUrl,
-    portalSearchUrl: city.portalSearchUrl
+    portalSearchUrl: city.portalSearchUrl,
+    provenance: buildProvenance(bandSelection, inputConfidence),
+    // Costed on the space the budget actually buys THERE, not on the Irish
+    // property's floor area — a bigger house costs more to heat and insure.
+    ownership: city.costs ? calculateOwnership(input.priceEur, estimatedSqM, kind, city.costs) : undefined
   };
 }

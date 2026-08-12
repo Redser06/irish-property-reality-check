@@ -5,9 +5,10 @@ import { RemorseDashboard } from './components/RemorseDashboard';
 import { LaneTabs } from './components/LaneTabs';
 import { CityCard } from './components/CityCard';
 import { CityDetailModal } from './components/CityDetailModal';
-import { IrishPropertyInput, LaneFilter, RegionCategory, ComparisonResult } from './types';
+import { IrishPropertyInput, InputConfidence, LaneFilter, RegionCategory, ComparisonResult } from './types';
 import { CITIES_DATA, PRESET_PROPERTIES } from './data/citiesData';
-import { calculateComparison } from './utils/comparatorEngine';
+import { FX_AS_OF } from './data/generated/fx';
+import { calculateComparison, PRESET_INPUT_CONFIDENCE } from './utils/comparatorEngine';
 
 // Counts are derived from the data, never hardcoded — add a city and the copy follows.
 const TOTAL_CITY_COUNT = CITIES_DATA.length;
@@ -17,19 +18,27 @@ const LANE_2_COUNT = CITIES_DATA.filter((c) => c.lane === 2).length;
 export const App: React.FC = () => {
   // Default property input (€550k Dublin 2-Bed)
   const [irishInput, setIrishInput] = useState<IrishPropertyInput>(PRESET_PROPERTIES[0].input);
+  // Travels with the input so every card can say which of these numbers we read
+  // and which we guessed. Starts as 'preset' because that is what the default is.
+  const [inputConfidence, setInputConfidence] = useState<InputConfidence>(PRESET_INPUT_CONFIDENCE);
+
+  const handleInputChange = (next: IrishPropertyInput, confidence: InputConfidence) => {
+    setIrishInput(next);
+    setInputConfidence(confidence);
+  };
 
   // Filters & Sorting
   const [activeLane, setActiveLane] = useState<LaneFilter>('all');
   const [activeRegion, setActiveRegion] = useState<RegionCategory>('All');
-  const [sortBy, setSortBy] = useState<'remorse' | 'space' | 'sun' | 'price'>('remorse');
+  const [sortBy, setSortBy] = useState<'remorse' | 'space' | 'sun' | 'price' | 'tco'>('remorse');
 
   // Selected Modal
   const [selectedCityModal, setSelectedCityModal] = useState<ComparisonResult | null>(null);
 
   // Compute comparisons for all cities
   const allComparisons = useMemo(() => {
-    return CITIES_DATA.map((city) => calculateComparison(irishInput, city));
-  }, [irishInput]);
+    return CITIES_DATA.map((city) => calculateComparison(irishInput, city, { inputConfidence }));
+  }, [irishInput, inputConfidence]);
 
   // Filtered & Sorted comparisons
   const filteredComparisons = useMemo(() => {
@@ -61,6 +70,12 @@ export const App: React.FC = () => {
       if (sortBy === 'price') {
         return a.city.pricePerSqM - b.city.pricePerSqM;
       }
+      if (sortBy === 'tco') {
+        // Cities without cost data sort last rather than pretending to be free.
+        const av = a.ownership?.tenYearTotalEur ?? Number.POSITIVE_INFINITY;
+        const bv = b.ownership?.tenYearTotalEur ?? Number.POSITIVE_INFINITY;
+        return av - bv;
+      }
       return 0;
     });
 
@@ -75,7 +90,8 @@ export const App: React.FC = () => {
       {/* Main Input Form */}
       <PropertyInputForm
         currentInput={irishInput}
-        onInputChange={setIrishInput}
+        currentConfidence={inputConfidence}
+        onInputChange={handleInputChange}
       />
 
       {/* Remorse Dashboard Gauge */}
@@ -131,6 +147,10 @@ export const App: React.FC = () => {
         </p>
         <p style={{ fontSize: '0.75rem' }}>
           Estimates are based on average city price/m² benchmarks, real-time portal query structures, and satirical existential calculations.
+        </p>
+        <p style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+          Exchange rates: European Central Bank reference rates, {FX_AS_OF}. Each city&apos;s price/m² carries its own
+          source and date — open any city&apos;s detailed breakdown to see them.
         </p>
       </footer>
     </div>

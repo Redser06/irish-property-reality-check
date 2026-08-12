@@ -13,8 +13,8 @@ interface LaneTabsProps {
   onLaneChange: (lane: LaneFilter) => void;
   activeRegion: RegionCategory;
   onRegionChange: (region: RegionCategory) => void;
-  sortBy: 'remorse' | 'space' | 'sun' | 'price';
-  onSortChange: (sort: 'remorse' | 'space' | 'sun' | 'price') => void;
+  sortBy: 'remorse' | 'space' | 'sun' | 'price' | 'tco';
+  onSortChange: (sort: 'remorse' | 'space' | 'sun' | 'price' | 'tco') => void;
   resultsCount: number;
 }
 
@@ -70,7 +70,7 @@ export const LaneTabs: React.FC<LaneTabsProps> = ({
           <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Sort By:</span>
           <select
             value={sortBy}
-            onChange={(e) => onSortChange(e.target.value as 'remorse' | 'space' | 'sun' | 'price')}
+            onChange={(e) => onSortChange(e.target.value as 'remorse' | 'space' | 'sun' | 'price' | 'tco')}
             className="input-field"
             style={{ padding: '8px 12px', fontSize: '0.85rem', width: 'auto', background: 'rgba(15, 23, 42, 0.9)' }}
           >
@@ -78,6 +78,7 @@ export const LaneTabs: React.FC<LaneTabsProps> = ({
             <option value="space">📐 Biggest Space Multiplier</option>
             <option value="sun">☀️ Most Sunshine Days</option>
             <option value="price">💰 Lowest Price / Sq Meter</option>
+            <option value="tco">💸 Lowest 10-Year Cost to Own</option>
           </select>
         </div>
 

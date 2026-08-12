@@ -9,7 +9,11 @@
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.api.json --noEmit",
+    "ingest:fx": "tsx tools/ingest/fetchEcbRates.ts && tsx tools/ingest/syncCityFxLiterals.ts",
+    "ingest:prices": "tsx tools/ingest/buildPriceMatrix.ts && tsx tools/ingest/applyCsoDefaults.ts",
+    "ingest": "npm run ingest:fx && npm run ingest:prices"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
@@ -20,6 +24,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@types/canvas-confetti": "^1.9.0",
+    "@types/node": "^26.2.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
@@ -27,6 +32,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.9.0",
+    "tsx": "^4.23.12",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.66.0",
     "vite": "^6.0.7",

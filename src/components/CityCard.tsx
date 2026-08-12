@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ComparisonResult } from '../types';
-import { Search, ExternalLink, Sun, Maximize2, Bed, Bath, Flame, Beer, ArrowRight } from 'lucide-react';
+import { Search, ExternalLink, Sun, Maximize2, Bed, Bath, Flame, Beer, ArrowRight, AlertTriangle } from 'lucide-react';
 
 interface CityCardProps {
   comparison: ComparisonResult;
@@ -27,7 +27,7 @@ const formatPints = (pints: number): string => {
 };
 
 export const CityCard: React.FC<CityCardProps> = ({ comparison, onSelectCity }) => {
-  const { city, convertedPrice, estimatedSqM, estimatedSqFt, estimatedBeds, estimatedBaths, spaceMultiplier, remorseIndex, sunnyDaysDiff } = comparison;
+  const { city, convertedPrice, estimatedSqM, estimatedSqFt, estimatedBeds, estimatedBaths, spaceMultiplier, remorseIndex, sunnyDaysDiff, provenance, ownership } = comparison;
 
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -159,6 +159,49 @@ export const CityCard: React.FC<CityCardProps> = ({ comparison, onSelectCity }) 
               </div>
             </div>
           </div>
+
+          {/* True cost of holding. Sticker price hides an order-of-magnitude
+              difference in recurring property tax between countries. */}
+          {ownership && (
+            <div
+              style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                padding: '8px 10px', marginBottom: '12px',
+                background: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)', fontSize: '0.78rem'
+              }}
+              title={`${ownership.breakdown.map((b) => `${b.label}: EUR ${b.annualEur.toLocaleString()}/yr`).join('\n')}\n\nUpfront taxes and fees: EUR ${ownership.upfrontEur.toLocaleString()}\n\n${ownership.source}`}
+            >
+              <span style={{ color: 'var(--text-muted)' }}>True cost to hold</span>
+              <span style={{ fontWeight: 700, color: 'var(--accent-cyan)' }}>
+                €{ownership.annualEur.toLocaleString()}/yr
+              </span>
+            </div>
+          )}
+
+          {/* Confidence chip. Only shown when the figures above deserve a caveat —
+              a badge on every card would be noise, and noise gets ignored. */}
+          {provenance.overall !== 'high' && (
+            <div
+              className="badge"
+              title={provenance.caveats.join('\n')}
+              style={{
+                display: 'inline-flex',
+                marginBottom: '10px',
+                fontSize: '0.72rem',
+                background: provenance.overall === 'low' ? 'rgba(244, 63, 94, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                color: provenance.overall === 'low' ? 'var(--accent-rose)' : '#fbbf24',
+                border: `1px solid ${provenance.overall === 'low' ? 'rgba(244, 63, 94, 0.28)' : 'rgba(245, 158, 11, 0.28)'}`
+              }}
+            >
+              <AlertTriangle size={12} />
+              {provenance.input.area === 'assumed'
+                ? 'Floor area assumed'
+                : provenance.band.band.confidence === 'estimated'
+                  ? 'Estimated price data'
+                  : 'Indicative only'}
+            </div>
+          )}
 
           {/* Weather and Guinness Indicators */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
