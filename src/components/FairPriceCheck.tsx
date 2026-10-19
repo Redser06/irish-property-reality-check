@@ -192,8 +192,8 @@ export const FairPriceCheck: React.FC<FairPriceCheckProps> = ({ irishInput }) =>
         <p style={{ color: 'var(--accent-amber)', fontSize: '0.82rem', marginTop: '12px' }}>
           <AlertTriangle size={14} style={{ verticalAlign: '-2px', marginRight: '6px' }} />
           Routing key {place.routingKey} is {place.routingKeyMismatch.postTown}, Co. {place.routingKeyMismatch.listedCounty} on the
-          public routing-area list ({place.routingKeyMismatch.source}). Compass maps it to {place.routingKeyMismatch.compassCounty},
-          and this grade follows Compass.
+          public routing-area list ({place.routingKeyMismatch.source}). Compass maps it to {place.routingKeyMismatch.compassCounty}.
+          The county lookup follows that map. Compass's unsourced €/m² for that county is not applied.
         </p>
       )}
 
