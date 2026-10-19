@@ -103,6 +103,22 @@ describe('parseIrishPropertyInput', () => {
     expect(result.input.priceEur).toBe(850000);
   });
 
+  it('moves the location to Galway when the note names that county, and keeps Dublin 12 when the note only says Dublin', () => {
+    const galway = parse('3 bed Galway €450,000', fallback);
+    expect(galway.extracted.place).toBe(true);
+    expect(galway.input.location).toBe('Galway');
+
+    const dublin = parse('€600k 3 bed house in Dublin', fallback);
+    expect(dublin.extracted.place).toBe(false);
+    expect(dublin.input.location).toBe('Dublin 12');
+  });
+
+  it('replaces the location with a normalised Eircode when one is pasted', () => {
+    const result = parse('D06 Y2K3 3 bed €625,000', fallback);
+    expect(result.extracted.place).toBe(true);
+    expect(result.input.location).toBe('D06 Y2K3');
+  });
+
   it('returns the fallback unchanged with no warning for empty input', () => {
     const result = parse('', fallback);
     expect(result.input).toEqual(fallback);

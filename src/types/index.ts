@@ -23,7 +23,7 @@ export interface IrishPropertyInput {
  */
 export interface ParseResult {
   input: IrishPropertyInput;
-  extracted: { price: boolean; beds: boolean; area: boolean };
+  extracted: { price: boolean; beds: boolean; area: boolean; place: boolean };
   isUrl: boolean;
   warning?: string;
 }

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Header } from './components/Header';
+import { FairPriceCheck } from './components/FairPriceCheck';
 import { PropertyInputForm } from './components/PropertyInputForm';
 import { RemorseDashboard } from './components/RemorseDashboard';
 import { LaneTabs } from './components/LaneTabs';
@@ -77,6 +78,8 @@ export const App: React.FC = () => {
         currentInput={irishInput}
         onInputChange={setIrishInput}
       />
+
+      <FairPriceCheck irishInput={irishInput} />
 
       {/* Remorse Dashboard Gauge */}
       <RemorseDashboard

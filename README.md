@@ -21,6 +21,7 @@
 - ☀️ **Climate & Weather Differentials**: Compares annual sunny days vs Dublin’s average 140 rainy days.
 - 🍺 **Guinness Value Equivalence**: Converts the difference in living space (extra square footage vs your Irish property) into an equivalent number of pints of Guinness, priced at roughly €6.50 a pint. It's a one-off "this much extra space is worth this many pints" figure — not a recurring monthly spend.
 - 🔥 **Existential Dread Meter**: Satirical *Buyer's Remorse Index* score (0–100) with witty real-estate roasts.
+- ⚖️ **Fair Price Check**: Grades the asking price against a sourced local €/m² benchmark (Dublin, Cork, Galway, Limerick, Belfast) using the ±8% band from [Irish Property Compass](https://github.com/Redser06/irish-property-compass). Counties without a sourced figure are left ungraded. See `docs/FOLD-irish-property-compass.md`.
 - 🔍 **One-Click Real-World Search**:
   - **Google Listings Button**: Generates a pre-formatted Google search query for each destination (property type, city, converted price) — a starting point for browsing, not a live filtered search.
   - **Direct Portal Links**: Static links to each destination's city/region landing page on `Rightmove`, `Idealista`, `Domain.com.au`, `PropertyFinder`, `Zillow`, `SeLoger`, `PropertyPal`, and `Daft.ie`. These are general city pages, not searches filtered to your budget — you'll still need to set the price range yourself once you land on the portal.
@@ -121,6 +122,7 @@ irish-property-reality-check/
 ├── .github/workflows/ci.yml    # Lint, typecheck, test, build on push/PR
 ├── LICENSE                     # MIT license
 ├── .env.example                # Optional future-roadmap env vars
+├── docs/FOLD-irish-property-compass.md  # What was ported from Irish Property Compass
 └── src/
     ├── main.tsx                # React app mounting point
     ├── App.tsx                 # Root component & state manager
@@ -128,11 +130,17 @@ irish-property-reality-check/
     ├── types/
     │   └── index.ts            # TypeScript interfaces
     ├── data/
-    │   └── citiesData.ts       # 25 Cities dataset & Irish presets
+    │   ├── baseline.ts              # Dublin sunshine and €/m² baseline
+    │   ├── citiesData.ts            # 25 Cities dataset & Irish presets
+    │   └── irishBenchmarks.ts       # Sourced €/m² figures the fair-price check may use
     ├── utils/
     │   ├── comparatorEngine.ts      # Calculation logic & Remorse Index
-    │   └── comparatorEngine.test.ts # Unit tests (Vitest)
+    │   ├── comparatorEngine.test.ts # Unit tests (Vitest)
+    │   ├── eircode.ts               # Eircode / county helpers (from Compass)
+    │   ├── fairPrice.ts             # Fair-price band, verdict, sale stats
+    │   └── pprRow.ts                # One-row Property Price Register parser
     └── components/
+        ├── FairPriceCheck.tsx         # Asking-price grade vs a local €/m² benchmark
         ├── Header.tsx              # App banner & taglines
         ├── PropertyInputForm.tsx   # URL/spec input & presets
         ├── RemorseDashboard.tsx    # Dread gauge & top shock cities
