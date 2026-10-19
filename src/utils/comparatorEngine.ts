@@ -1,10 +1,16 @@
 import { CityData, ComparisonResult, IrishPropertyInput, ParseResult } from '../types';
 import { DUBLIN_BASELINE } from '../data/baseline';
+import {
+  countyFromRoutingKey,
+  extractCountyFromAddress,
+  extractRoutingKey,
+  findEircode,
+} from './eircode';
 
 /** Price of a pint of Guinness used for the "pints of space value" metric. */
 export const PINT_PRICE_EUR = 6.5;
 
-const SQFT_PER_SQM = 10.7639;
+export const SQFT_PER_SQM = 10.7639;
 
 // A residential asking price we are willing to believe.
 const MIN_PLAUSIBLE_PRICE = 50_000;
@@ -132,7 +138,7 @@ function safeDecode(value: string): string {
 export function parseIrishPropertyInput(rawInput: string, fallbackInput: IrishPropertyInput): ParseResult {
   const cleanStr = (rawInput || '').replace(/[\u00a0\u2007\u202f]/g, ' ').trim();
 
-  const extracted = { price: false, beds: false, area: false };
+  const extracted = { price: false, beds: false, area: false, place: false };
 
   if (!cleanStr) {
     return { input: fallbackInput, extracted, isUrl: false, warning: undefined };
@@ -177,7 +183,37 @@ export function parseIrishPropertyInput(rawInput: string, fallbackInput: IrishPr
   extracted.beds = beds !== null;
   extracted.area = areaSqFt !== null;
 
-  const gotNothing = !extracted.price && !extracted.beds && !extracted.area;
+  // County / Eircode, using the same helpers as Irish Property Compass.
+  // A recognised Dublin mention does not replace a more specific fallback
+  // such as "Dublin 12". An Eircode always wins, because it is the more
+  // precise place.
+  const placeText = looksLikeUrl ? (parsedUrl ? safeDecode(`${parsedUrl.pathname} ${parsedUrl.search}`).replace(/[-_/+]/g, ' ') : '') : cleanStr;
+  const foundEircode = findEircode(placeText);
+  const foundCounty = extractCountyFromAddress(placeText);
+  const foundRoutingKey = extractRoutingKey(placeText);
+  const fallbackHasCounty = foundCounty
+    ? fallbackInput.location.toLowerCase().includes(foundCounty.toLowerCase())
+    : false;
+
+  let location = fallbackInput.location;
+  if (foundEircode) {
+    location = foundEircode;
+    extracted.place = true;
+  } else if (foundCounty && !fallbackHasCounty) {
+    location = foundCounty;
+    extracted.place = true;
+  } else if (foundRoutingKey) {
+    const rkCounty = countyFromRoutingKey(foundRoutingKey);
+    const fallbackHasRkCounty = rkCounty
+      ? fallbackInput.location.toLowerCase().includes(rkCounty.toLowerCase())
+      : false;
+    if (rkCounty && !fallbackHasRkCounty) {
+      location = foundRoutingKey;
+      extracted.place = true;
+    }
+  }
+
+  const gotNothing = !extracted.price && !extracted.beds && !extracted.area && !extracted.place;
   if (gotNothing && !warning) {
     warning = looksLikeUrl
       ? "Couldn't read the details from that link — enter them manually below."
@@ -190,7 +226,8 @@ export function parseIrishPropertyInput(rawInput: string, fallbackInput: IrishPr
     beds: beds ?? fallbackInput.beds,
     sqft: areaSqFt ?? fallbackInput.sqft,
     url: parsedUrl ? cleanStr : undefined,
-    title
+    title,
+    location,
   };
 
   return { input, extracted, isUrl: looksLikeUrl, warning };

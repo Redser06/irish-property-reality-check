@@ -47,6 +47,7 @@ export const PropertyInputForm: React.FC<PropertyInputFormProps> = ({
     if (extracted.price) read.push(`€${input.priceEur.toLocaleString()}`);
     if (extracted.beds) read.push(`${input.beds} bed${input.beds === 1 ? '' : 's'}`);
     if (extracted.area) read.push(`${input.sqft.toLocaleString()} sq ft`);
+    if (extracted.place) read.push(input.location);
 
     const missing: string[] = [];
     if (!extracted.price) missing.push(`price — sticking with €${input.priceEur.toLocaleString()}`);
